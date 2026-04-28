@@ -1,0 +1,43 @@
+## Build outputs
+[Bb]in/
+[Oo]bj/
+[Oo]ut/
+[Ll]og/
+[Ll]ogs/
+
+## Visual Studio / Rider
+.vs/
+.idea/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+## Rider
+.idea/
+
+## VS Code
+.vscode/
+
+## Environment / secrets
+*.env
+appsettings.*.json
+!appsettings.json
+!appsettings.Development.json
+
+## NuGet
+*.nupkg
+*.snupkg
+**/[Pp]ackages/*
+
+## Coverage
+[Cc]overage/
+*.coverage
+*.coveragexml
+
+## Misc
+*.swp
+*.bak
+*.orig
+.DS_Store
+Thumbs.db
