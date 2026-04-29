@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using SportMap.Core.Interfaces.Repositories;
 using SportMap.Core.Interfaces.Services;
 using SportMap.Infrastructure.Data;
+using SportMap.Infrastructure.Email;
 using SportMap.Infrastructure.Repositories;
 using SportMap.Infrastructure.Security;
 
@@ -19,10 +20,13 @@ public static class DependencyInjection
             options.UseSqlServer(configuration.GetConnectionString("DefaultConnection")));
 
         services.Configure<JwtSettings>(configuration.GetSection("Jwt"));
+        services.Configure<EmailSettings>(configuration.GetSection("Email"));
 
         services.AddScoped<IUserRepository, UserRepository>();
+        services.AddScoped<IActivityRepository, ActivityRepository>();
         services.AddSingleton<IPasswordHasher, BcryptPasswordHasher>();
         services.AddSingleton<IJwtTokenGenerator, JwtTokenGenerator>();
+        services.AddScoped<IEmailService, SmtpEmailService>();
 
         return services;
     }

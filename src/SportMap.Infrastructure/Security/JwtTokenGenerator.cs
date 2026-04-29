@@ -4,6 +4,7 @@ using SportMap.Core.Entities;
 using SportMap.Core.Interfaces.Services;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
+using System.Security.Cryptography;
 using System.Text;
 
 namespace SportMap.Infrastructure.Security;
@@ -43,5 +44,13 @@ public class JwtTokenGenerator : IJwtTokenGenerator
 
         var tokenString = new JwtSecurityTokenHandler().WriteToken(token);
         return (tokenString, expiresAt);
+    }
+
+    public (string Token, DateTime Expiry) GenerateRefreshToken()
+    {
+        var bytes = RandomNumberGenerator.GetBytes(64);
+        var token = Convert.ToBase64String(bytes);
+        var expiry = DateTime.UtcNow.AddDays(7);
+        return (token, expiry);
     }
 }

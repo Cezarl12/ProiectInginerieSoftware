@@ -2,25 +2,36 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SportMap.Core.Exceptions;
 using SportMap.Core.Interfaces.Services;
+using SportMap.Models.DTOs.Activities;
 using SportMap.Models.DTOs.Users;
+using Swashbuckle.AspNetCore.Annotations;
 using System.Security.Claims;
 
 namespace SportMap.API.Controllers;
 
+/// <summary>Gestionarea profilelor și activităților utilizatorilor.</summary>
 [ApiController]
 [Route("api/users")]
 [Authorize]
+[Tags("Users")]
 public class UsersController : ControllerBase
 {
     private readonly IUserService _userService;
+    private readonly IActivityService _activityService;
 
-    public UsersController(IUserService userService)
+    public UsersController(IUserService userService, IActivityService activityService)
     {
         _userService = userService;
+        _activityService = activityService;
     }
 
-    /// <summary>List all users (admin / debug usage).</summary>
+    /// <summary>Listează toți utilizatorii înregistrați.</summary>
     [HttpGet]
+    [SwaggerOperation(
+        Summary = "Listă utilizatori",
+        Description = "Returnează toți utilizatorii înregistrați. **Necesită autentificare.**")]
+    [SwaggerResponse(200, "Listă utilizatori", typeof(IEnumerable<UserDto>))]
+    [SwaggerResponse(401, "Neautentificat")]
     [ProducesResponseType(typeof(IEnumerable<UserDto>), StatusCodes.Status200OK)]
     public async Task<ActionResult<IEnumerable<UserDto>>> GetAll()
     {
@@ -28,8 +39,14 @@ public class UsersController : ControllerBase
         return Ok(users);
     }
 
-    /// <summary>Get a single user by ID.</summary>
+    /// <summary>Returnează profilul public al unui utilizator după ID.</summary>
     [HttpGet("{id:int}")]
+    [SwaggerOperation(
+        Summary = "Detalii utilizator",
+        Description = "Returnează profilul public al unui utilizator identificat prin ID numeric. **Necesită autentificare.**")]
+    [SwaggerResponse(200, "Utilizator găsit", typeof(UserDto))]
+    [SwaggerResponse(401, "Neautentificat")]
+    [SwaggerResponse(404, "Utilizator inexistent")]
     [ProducesResponseType(typeof(UserDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<UserDto>> GetById(int id)
@@ -38,8 +55,13 @@ public class UsersController : ControllerBase
         return user is null ? NotFound() : Ok(user);
     }
 
-    /// <summary>Get the currently authenticated user's profile.</summary>
+    /// <summary>Returnează profilul utilizatorului autentificat curent.</summary>
     [HttpGet("me")]
+    [SwaggerOperation(
+        Summary = "Profilul meu",
+        Description = "Returnează datele de profil extrase din JWT-ul curent. **Necesită autentificare.**")]
+    [SwaggerResponse(200, "Profilul meu", typeof(UserDto))]
+    [SwaggerResponse(401, "Neautentificat")]
     [ProducesResponseType(typeof(UserDto), StatusCodes.Status200OK)]
     public async Task<ActionResult<UserDto>> GetCurrentUser()
     {
@@ -48,8 +70,15 @@ public class UsersController : ControllerBase
         return user is null ? NotFound() : Ok(user);
     }
 
-    /// <summary>Update the current user's profile.</summary>
+    /// <summary>Actualizează profilul utilizatorului autentificat.</summary>
     [HttpPut("me")]
+    [SwaggerOperation(
+        Summary = "Actualizare profil",
+        Description = "Modifică username, poza de profil sau sporturile favorite. " +
+                      "Câmpurile `null` sunt ignorate (semantică PATCH). **Necesită autentificare.**")]
+    [SwaggerResponse(200, "Profil actualizat cu succes", typeof(UserDto))]
+    [SwaggerResponse(401, "Neautentificat")]
+    [SwaggerResponse(409, "Username deja folosit de alt cont")]
     [ProducesResponseType(typeof(UserDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status409Conflict)]
     public async Task<ActionResult<UserDto>> UpdateCurrentUser([FromBody] UpdateUserDto dto)
@@ -59,25 +88,55 @@ public class UsersController : ControllerBase
         return Ok(updated);
     }
 
-    /// <summary>Change the current user's password.</summary>
+    /// <summary>Schimbă parola utilizatorului autentificat.</summary>
     [HttpPost("me/change-password")]
-    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [SwaggerOperation(
+        Summary = "Schimbare parolă",
+        Description = "Necesită parola curentă pentru verificare. " +
+                      "După schimbare toate sesiunile active (refresh token-uri) sunt revocate. **Necesită autentificare.**")]
+    [SwaggerResponse(200, "Parolă schimbată cu succes")]
+    [SwaggerResponse(401, "Parolă curentă incorectă sau neautentificat")]
+    [ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordDto dto)
     {
         var userId = GetCurrentUserId();
         await _userService.ChangePasswordAsync(userId, dto);
-        return NoContent();
+        return Ok(new { message = "Password changed successfully." });
     }
 
-    /// <summary>Delete the current user's account.</summary>
+    /// <summary>Șterge definitiv contul utilizatorului autentificat.</summary>
     [HttpDelete("me")]
-    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [SwaggerOperation(
+        Summary = "Ștergere cont",
+        Description = "Șterge definitiv contul și toate datele asociate. **Operație ireversibilă. Necesită autentificare.**")]
+    [SwaggerResponse(200, "Cont șters cu succes")]
+    [SwaggerResponse(401, "Neautentificat")]
+    [ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
     public async Task<IActionResult> DeleteCurrentUser()
     {
         var userId = GetCurrentUserId();
         await _userService.DeleteAsync(userId);
-        return NoContent();
+        return Ok(new { message = "Account deleted successfully." });
+    }
+
+    /// <summary>Returnează activitățile unui utilizator specificat.</summary>
+    [HttpGet("{id:int}/activities")]
+    [SwaggerOperation(
+        Summary = "Activitățile unui utilizator",
+        Description = "Listează toate activitățile organizate sau la care participă utilizatorul cu ID-ul dat. **Necesită autentificare.**")]
+    [SwaggerResponse(200, "Listă activități", typeof(IEnumerable<ActivityDto>))]
+    [SwaggerResponse(401, "Neautentificat")]
+    [SwaggerResponse(404, "Utilizator inexistent")]
+    [ProducesResponseType(typeof(IEnumerable<ActivityDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<IEnumerable<ActivityDto>>> GetUserActivities(int id)
+    {
+        var user = await _userService.GetByIdAsync(id);
+        if (user is null) return NotFound();
+
+        var activities = await _activityService.GetByUserIdAsync(id);
+        return Ok(activities);
     }
 
     private int GetCurrentUserId()

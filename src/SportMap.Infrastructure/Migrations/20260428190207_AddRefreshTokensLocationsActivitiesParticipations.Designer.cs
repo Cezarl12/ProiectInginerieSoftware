@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using SportMap.Infrastructure.Data;
 
@@ -11,9 +12,11 @@ using SportMap.Infrastructure.Data;
 namespace SportMap.Infrastructure.Migrations
 {
     [DbContext(typeof(SportMapDbContext))]
-    partial class SportMapDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260428190207_AddRefreshTokensLocationsActivitiesParticipations")]
+    partial class AddRefreshTokensLocationsActivitiesParticipations
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -154,18 +157,6 @@ namespace SportMap.Infrastructure.Migrations
                         .IsRequired()
                         .HasMaxLength(150)
                         .HasColumnType("nvarchar(150)");
-
-                    b.Property<string>("EmailConfirmationToken")
-                        .HasMaxLength(64)
-                        .HasColumnType("nvarchar(64)");
-
-                    b.Property<DateTime?>("EmailConfirmationTokenExpiry")
-                        .HasColumnType("datetime2");
-
-                    b.Property<bool>("IsEmailConfirmed")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bit")
-                        .HasDefaultValue(false);
 
                     b.Property<string>("FavoriteSports")
                         .HasMaxLength(255)

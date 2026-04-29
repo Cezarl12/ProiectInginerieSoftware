@@ -54,4 +54,10 @@ public class UserRepository : IUserRepository
 
     public async Task<bool> ExistsByUsernameAsync(string username) =>
         await _context.Users.AnyAsync(u => u.Username == username);
+
+    public async Task<User?> GetByRefreshTokenAsync(string refreshToken) =>
+        await _context.Users.FirstOrDefaultAsync(u => u.RefreshToken == refreshToken);
+
+    public async Task<User?> GetByConfirmationTokenAsync(string token) =>
+        await _context.Users.FirstOrDefaultAsync(u => u.EmailConfirmationToken == token);
 }
