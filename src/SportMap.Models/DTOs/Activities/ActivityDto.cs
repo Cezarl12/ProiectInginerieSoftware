@@ -1,3 +1,7 @@
+using SportMap.Models.DTOs.Locations;
+using SportMap.Models.DTOs.Users;
+using SportMap.Models.Enums;
+
 namespace SportMap.Models.DTOs.Activities;
 
 /// <summary>Detalii despre o activitate sportivă.</summary>
@@ -21,11 +25,15 @@ public class ActivityDto
     /// <example>10</example>
     public int MaxParticipants { get; set; }
 
-    /// <summary>Tipul activității (ex: public, privat).</summary>
-    /// <example>public</example>
-    public string Type { get; set; } = string.Empty;
+    /// <summary>Tipul activității: Public sau Private.</summary>
+    /// <example>Public</example>
+    public ActivityType Type { get; set; }
 
-    /// <summary>ID-ul utilizatorului care a creat activitatea.</summary>
+    /// <summary>Descriere opțională a activității.</summary>
+    /// <example>Meci prietenos, toți sunt bineveniti. Aduceți ghete de fotbal.</example>
+    public string? Description { get; set; }
+
+    /// <summary>ID-ul utilizatorului organizator.</summary>
     public int OrganizerId { get; set; }
 
     /// <summary>ID-ul locației unde se desfășoară activitatea.</summary>
@@ -33,6 +41,12 @@ public class ActivityDto
 
     /// <summary>Numărul curent de participanți confirmați.</summary>
     public int ParticipantCount { get; set; }
+
+    /// <summary>Organizatorul activității.</summary>
+    public UserDto? Organizer { get; set; }
+
+    /// <summary>Locația unde se desfășoară activitatea.</summary>
+    public LocationDto? Location { get; set; }
 
     /// <summary>Data creării activității (UTC).</summary>
     public DateTime CreatedAt { get; set; }

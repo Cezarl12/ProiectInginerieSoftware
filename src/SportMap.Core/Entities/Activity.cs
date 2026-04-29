@@ -1,3 +1,5 @@
+using SportMap.Models.Enums;
+
 namespace SportMap.Core.Entities;
 
 public class Activity
@@ -7,7 +9,8 @@ public class Activity
     public string Sport { get; set; } = string.Empty;
     public DateTime DateTime { get; set; }
     public int MaxParticipants { get; set; }
-    public string Type { get; set; } = string.Empty; // "public" | "private"
+    public ActivityType Type { get; set; }
+    public string? Description { get; set; }
 
     public int OrganizerId { get; set; }
     public int LocationId { get; set; }

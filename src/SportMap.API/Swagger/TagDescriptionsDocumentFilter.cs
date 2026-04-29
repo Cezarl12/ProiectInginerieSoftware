@@ -9,9 +9,10 @@ internal sealed class TagDescriptionsDocumentFilter : IDocumentFilter
     {
         swaggerDoc.Tags =
         [
-            new OpenApiTag { Name = "Auth",   Description = "Înregistrare, autentificare, refresh token și logout" },
-            new OpenApiTag { Name = "Users",  Description = "Gestionarea profilelor și activităților utilizatorilor" },
-            new OpenApiTag { Name = "Health", Description = "Monitorizarea stării serviciului" }
+            new OpenApiTag { Name = "Auth",       Description = "Înregistrare, autentificare, refresh token și logout" },
+            new OpenApiTag { Name = "Users",       Description = "Gestionarea profilelor utilizatorilor" },
+            new OpenApiTag { Name = "Activities",  Description = "Creare, listare și gestionare activități sportive" },
+            new OpenApiTag { Name = "Health",      Description = "Monitorizarea stării serviciului" }
         ];
     }
 }
