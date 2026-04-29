@@ -13,6 +13,7 @@ namespace SportMap.API.Controllers;
 [Route("api/activities")]
 [Authorize]
 [Tags("Activities")]
+[ApiExplorerSettings(IgnoreApi = true)]
 public class ActivitiesController : ControllerBase
 {
     private readonly IActivityService _activityService;

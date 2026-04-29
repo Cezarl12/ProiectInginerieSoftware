@@ -124,7 +124,7 @@ public class UsersController : ControllerBase
     [HttpGet("{id:int}/activities")]
     [SwaggerOperation(
         Summary = "Activitățile unui utilizator",
-        Description = "Listează toate activitățile organizate sau la care participă utilizatorul cu ID-ul dat. **Necesită autentificare.**")]
+        Description = "Listează toate activitățile organizate de utilizatorul cu ID-ul dat. **Necesită autentificare.**")]
     [SwaggerResponse(200, "Listă activități", typeof(IEnumerable<ActivityDto>))]
     [SwaggerResponse(401, "Neautentificat")]
     [SwaggerResponse(404, "Utilizator inexistent")]

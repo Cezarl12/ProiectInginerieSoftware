@@ -28,6 +28,15 @@ public class LocationDto
     /// <example>Approved</example>
     public LocationStatus Status { get; set; }
 
+    /// <summary>URL-ul pozei principale a locației.</summary>
+    public string? MainPhotoUrl { get; set; }
+
+    /// <summary>URL-urile pozelor secundare ale locației.</summary>
+    public List<string> SecondaryPhotoUrls { get; set; } = new();
+
+    /// <summary>Descriere detaliată a locației.</summary>
+    public string? Details { get; set; }
+
     /// <summary>Data adăugării locației (UTC).</summary>
     public DateTime CreatedAt { get; set; }
 }
