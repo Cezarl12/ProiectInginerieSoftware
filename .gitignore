@@ -53,5 +53,8 @@ Thumbs.db
 run_err.txt
 run_out.txt
 
+# Design reference (HTML mockups + PNG screenshots — not source code)
+design/
+
 # Claude
 .claude/
