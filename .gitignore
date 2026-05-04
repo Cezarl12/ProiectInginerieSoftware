@@ -1,48 +1,57 @@
-## Build outputs
+# .NET / Visual Studio (backend)
 [Bb]in/
 [Oo]bj/
 [Oo]ut/
 [Ll]og/
 [Ll]ogs/
-
-## Visual Studio / Rider
-.vs/
-.idea/
 *.user
 *.suo
 *.userosscache
 *.sln.docstates
-
-## Rider
+.vs/
 .idea/
-
-## VS Code
 .vscode/
-
-## Environment / secrets
-*.env
-appsettings.*.json
-!appsettings.json
-!appsettings.Development.json
-
-## NuGet
 *.nupkg
 *.snupkg
-**/[Pp]ackages/*
-
-## Coverage
+[Pp]ackages/*
 [Cc]overage/
 *.coverage
 *.coveragexml
 
-## Misc
+# Node / Angular (frontend)
+node_modules/
+.angular/
+dist/
+.parcel-cache/
+.cache/
+build/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+coverage/
+.nyc_output/
+
+# Secrets
+*.env
+*.env.local
+*.env.*.local
+appsettings.*.json
+!appsettings.json
+!appsettings.Development.json
+
+# OS
+.DS_Store
+Thumbs.db
 *.swp
 *.bak
 *.orig
-.DS_Store
-Thumbs.db
-## Claude
-.claude/
+*.tmp
+*.tsbuildinfo
+
 # Runtime logs
 run_err.txt
 run_out.txt
+
+# Claude
+.claude/
