@@ -20,11 +20,11 @@ jobs:
           dotnet-version: 8.0.x
 
       - name: Restore dependencies
-        run: dotnet restore SportMap.sln
+        run: dotnet restore backend/SportMap.sln
 
       - name: Build
-        run: dotnet build SportMap.sln --configuration Release --no-restore
+        run: dotnet build backend/SportMap.sln --configuration Release --no-restore
 
       - name: Test
-        run: dotnet test SportMap.sln --configuration Release --no-build --verbosity normal
+        run: dotnet test backend/SportMap.sln --configuration Release --no-build --verbosity normal
         continue-on-error: true   # tests are added in a follow-up lab
