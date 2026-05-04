@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using SportMap.Infrastructure.Data;
 
@@ -11,9 +12,11 @@ using SportMap.Infrastructure.Data;
 namespace SportMap.Infrastructure.Migrations
 {
     [DbContext(typeof(SportMapDbContext))]
-    partial class SportMapDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260429190057_AddLocations")]
+    partial class AddLocations
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -76,35 +79,6 @@ namespace SportMap.Infrastructure.Migrations
                     b.ToTable("Activities", (string)null);
                 });
 
-            modelBuilder.Entity("SportMap.Core.Entities.Friendship", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<DateTime>("CreatedAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("datetime2")
-                        .HasDefaultValueSql("SYSUTCDATETIME()");
-
-                    b.Property<int>("FolloweeId")
-                        .HasColumnType("int");
-
-                    b.Property<int>("FollowerId")
-                        .HasColumnType("int");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("FolloweeId");
-
-                    b.HasIndex("FollowerId", "FolloweeId")
-                        .IsUnique();
-
-                    b.ToTable("Friendships", (string)null);
-                });
-
             modelBuilder.Entity("SportMap.Core.Entities.Location", b =>
                 {
                     b.Property<int>("Id")
@@ -123,10 +97,6 @@ namespace SportMap.Infrastructure.Migrations
                         .HasColumnType("datetime2")
                         .HasDefaultValueSql("SYSUTCDATETIME()");
 
-                    b.Property<string>("Details")
-                        .HasMaxLength(1000)
-                        .HasColumnType("nvarchar(1000)");
-
                     b.Property<bool>("HasLights")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("bit")
@@ -138,10 +108,6 @@ namespace SportMap.Infrastructure.Migrations
                     b.Property<decimal>("Longitude")
                         .HasColumnType("decimal(9,6)");
 
-                    b.Property<string>("MainPhotoUrl")
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
-
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(100)
@@ -149,10 +115,6 @@ namespace SportMap.Infrastructure.Migrations
 
                     b.Property<int?>("ProposedByUserId")
                         .HasColumnType("int");
-
-                    b.Property<string>("SecondaryPhotoUrls")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Sports")
                         .IsRequired()
@@ -187,13 +149,10 @@ namespace SportMap.Infrastructure.Migrations
                             Id = 1,
                             Address = "Str. General Magheru 1, Oradea",
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Details = "Stadionul Municipal Iuliu Bodola este principala arenă de fotbal din Oradea, cu o capacitate de 19.000 de locuri. Dispune de teren de gazon natural, vestiare moderne și tribune acoperite.",
                             HasLights = true,
                             Latitude = 47.051100m,
                             Longitude = 21.923900m,
-                            MainPhotoUrl = "https://picsum.photos/seed/stadion-oradea/800/500",
                             Name = "Stadionul Municipal Iuliu Bodola",
-                            SecondaryPhotoUrls = "[\"https://picsum.photos/seed/stadion-oradea-2/800/500\",\"https://picsum.photos/seed/stadion-oradea-3/800/500\"]",
                             Sports = "football",
                             Status = 1,
                             Surface = "grass"
@@ -203,13 +162,10 @@ namespace SportMap.Infrastructure.Migrations
                             Id = 2,
                             Address = "Str. Politehnicii 1, Oradea",
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Details = "Bazin olimpic acoperit cu 8 culoare, lungime 50m. Ideal pentru antrenamente de înot competițional și recreațional. Dispune de bazin de sărituri și saune.",
                             HasLights = true,
                             Latitude = 47.062800m,
                             Longitude = 21.911300m,
-                            MainPhotoUrl = "https://picsum.photos/seed/piscina-oradea/800/500",
                             Name = "Baza Olimpică de Natație Oradea",
-                            SecondaryPhotoUrls = "[\"https://picsum.photos/seed/piscina-oradea-2/800/500\",\"https://picsum.photos/seed/piscina-oradea-3/800/500\"]",
                             Sports = "swimming",
                             Status = 1
                         },
@@ -218,13 +174,10 @@ namespace SportMap.Infrastructure.Migrations
                             Id = 3,
                             Address = "Calea Bihorului 100, Oradea",
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Details = "Pistă dedicată ciclismului în Parcul Brătianu, cu o lungime de 3,5 km. Suprafață asfaltată, separată de trafic, înconjurată de vegetație. Acces liber, deschis publicului.",
                             HasLights = false,
                             Latitude = 47.055100m,
                             Longitude = 21.933100m,
-                            MainPhotoUrl = "https://picsum.photos/seed/ciclism-oradea/800/500",
                             Name = "Pista de Ciclism Parcul Brătianu",
-                            SecondaryPhotoUrls = "[\"https://picsum.photos/seed/ciclism-oradea-2/800/500\",\"https://picsum.photos/seed/ciclism-oradea-3/800/500\"]",
                             Sports = "cycling",
                             Status = 1,
                             Surface = "asphalt"
@@ -234,13 +187,10 @@ namespace SportMap.Infrastructure.Migrations
                             Id = 4,
                             Address = "Calea Sântandrei 77, Oradea",
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Details = "Complex cu 6 terenuri de tenis (4 zgură, 2 hard), iluminat nocturn, sală de forță și vestiare. Găzduiește turnee locale și regionale pe tot parcursul anului.",
                             HasLights = true,
                             Latitude = 47.071200m,
                             Longitude = 21.928700m,
-                            MainPhotoUrl = "https://picsum.photos/seed/tenis-oradea/800/500",
                             Name = "Complexul de Tenis Lotus",
-                            SecondaryPhotoUrls = "[\"https://picsum.photos/seed/tenis-oradea-2/800/500\",\"https://picsum.photos/seed/tenis-oradea-3/800/500\"]",
                             Sports = "tennis",
                             Status = 1,
                             Surface = "clay"
@@ -250,13 +200,10 @@ namespace SportMap.Infrastructure.Migrations
                             Id = 5,
                             Address = "Calea Borșului 35, Oradea",
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Details = "Sală polivalentă modernă cu o capacitate de 5.000 de locuri. Teren de baschet omologat FIBA, folosit pentru meciurile echipei CSM Oradea. Dispune de parcare, restaurant și magazine.",
                             HasLights = true,
                             Latitude = 47.062100m,
                             Longitude = 21.907300m,
-                            MainPhotoUrl = "https://picsum.photos/seed/arena-oradea/800/500",
                             Name = "XT Gold Arena",
-                            SecondaryPhotoUrls = "[\"https://picsum.photos/seed/arena-oradea-2/800/500\",\"https://picsum.photos/seed/arena-oradea-3/800/500\"]",
                             Sports = "basketball,handball",
                             Status = 1,
                             Surface = "hardcourt"
@@ -266,13 +213,10 @@ namespace SportMap.Infrastructure.Migrations
                             Id = 6,
                             Address = "Str. Universității 1, Oradea",
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Details = "Sală universitară cu terenuri de volei, baschet și badminton. Folosită pentru competiții studențești și antrenamente de club. Program extins în weekenduri.",
                             HasLights = true,
                             Latitude = 47.046900m,
                             Longitude = 21.933200m,
-                            MainPhotoUrl = "https://picsum.photos/seed/sala-uni-oradea/800/500",
                             Name = "Sala de Sport a Universității",
-                            SecondaryPhotoUrls = "[\"https://picsum.photos/seed/sala-uni-oradea-2/800/500\",\"https://picsum.photos/seed/sala-uni-oradea-3/800/500\"]",
                             Sports = "volleyball,basketball,badminton",
                             Status = 1,
                             Surface = "hardcourt"
@@ -282,13 +226,10 @@ namespace SportMap.Infrastructure.Migrations
                             Id = 7,
                             Address = "Str. General Magheru 1, Oradea",
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Details = "Pistă de atletism cu 8 culoare, suprafață tartan omologată IAAF. Include sectoare pentru sărituri în lungime, înălțime și aruncări. Deschisă publicului în afara competițiilor.",
                             HasLights = false,
                             Latitude = 47.051200m,
                             Longitude = 21.924100m,
-                            MainPhotoUrl = "https://picsum.photos/seed/atletism-oradea/800/500",
                             Name = "Pista de Atletism Iuliu Bodola",
-                            SecondaryPhotoUrls = "[\"https://picsum.photos/seed/atletism-oradea-2/800/500\",\"https://picsum.photos/seed/atletism-oradea-3/800/500\"]",
                             Sports = "athletics",
                             Status = 1,
                             Surface = "tartan"
@@ -298,13 +239,10 @@ namespace SportMap.Infrastructure.Migrations
                             Id = 8,
                             Address = "Str. Menumorut 3, Oradea",
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Details = "Sală cu capacitate de 2.500 locuri, dedicată handbalului și altor sporturi de sală. Teren omologat EHF, iluminat profesional și sistem de sonorizare.",
                             HasLights = true,
                             Latitude = 47.052100m,
                             Longitude = 21.920100m,
-                            MainPhotoUrl = "https://picsum.photos/seed/sala-sport-oradea/800/500",
                             Name = "Sala Sporturilor Oradea",
-                            SecondaryPhotoUrls = "[\"https://picsum.photos/seed/sala-sport-oradea-2/800/500\",\"https://picsum.photos/seed/sala-sport-oradea-3/800/500\"]",
                             Sports = "handball",
                             Status = 1,
                             Surface = "hardcourt"
@@ -314,13 +252,10 @@ namespace SportMap.Infrastructure.Migrations
                             Id = 9,
                             Address = "Piața Unirii 4, Oradea",
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Details = "Centru fitness modern în inima Oradei, cu echipamente cardio și de forță de ultimă generație. Clase de grup, personal traineri certificați, saună și zone de stretching.",
                             HasLights = true,
                             Latitude = 47.047800m,
                             Longitude = 21.919400m,
-                            MainPhotoUrl = "https://picsum.photos/seed/fitness-oradea/800/500",
                             Name = "Centrul Fitness SportMap Park",
-                            SecondaryPhotoUrls = "[\"https://picsum.photos/seed/fitness-oradea-2/800/500\",\"https://picsum.photos/seed/fitness-oradea-3/800/500\"]",
                             Sports = "fitness",
                             Status = 1
                         },
@@ -329,13 +264,10 @@ namespace SportMap.Infrastructure.Migrations
                             Id = 10,
                             Address = "Str. Republicii 22, Oradea",
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Details = "Sala Clubului Sportiv Crișul, cu ring omologat pentru competiții naționale, saci de box, apărători și echipament complet. Antrenori cu experiență internațională.",
                             HasLights = true,
                             Latitude = 47.046500m,
                             Longitude = 21.918900m,
-                            MainPhotoUrl = "https://picsum.photos/seed/box-oradea/800/500",
                             Name = "Sala de Box Crișul",
-                            SecondaryPhotoUrls = "[\"https://picsum.photos/seed/box-oradea-2/800/500\",\"https://picsum.photos/seed/box-oradea-3/800/500\"]",
                             Sports = "boxing",
                             Status = 1
                         });
@@ -357,19 +289,14 @@ namespace SportMap.Infrastructure.Migrations
                         .HasColumnType("datetime2")
                         .HasDefaultValueSql("SYSUTCDATETIME()");
 
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
-
                     b.Property<int>("UserId")
                         .HasColumnType("int");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("ActivityId");
+                    b.HasIndex("UserId");
 
-                    b.HasIndex("UserId", "ActivityId")
+                    b.HasIndex("ActivityId", "UserId")
                         .IsUnique();
 
                     b.ToTable("Participations", (string)null);
@@ -425,13 +352,6 @@ namespace SportMap.Infrastructure.Migrations
                     b.Property<DateTime?>("RefreshTokenExpiry")
                         .HasColumnType("datetime2");
 
-                    b.Property<string>("Role")
-                        .IsRequired()
-                        .ValueGeneratedOnAdd()
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)")
-                        .HasDefaultValue("User");
-
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime2");
 
@@ -468,25 +388,6 @@ namespace SportMap.Infrastructure.Migrations
                     b.Navigation("Location");
 
                     b.Navigation("Organizer");
-                });
-
-            modelBuilder.Entity("SportMap.Core.Entities.Friendship", b =>
-                {
-                    b.HasOne("SportMap.Core.Entities.User", "Followee")
-                        .WithMany()
-                        .HasForeignKey("FolloweeId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("SportMap.Core.Entities.User", "Follower")
-                        .WithMany()
-                        .HasForeignKey("FollowerId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("Followee");
-
-                    b.Navigation("Follower");
                 });
 
             modelBuilder.Entity("SportMap.Core.Entities.Location", b =>

@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using SportMap.Infrastructure.Data;
 
@@ -11,9 +12,11 @@ using SportMap.Infrastructure.Data;
 namespace SportMap.Infrastructure.Migrations
 {
     [DbContext(typeof(SportMapDbContext))]
-    partial class SportMapDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260429191152_AddLocationPhotos")]
+    partial class AddLocationPhotos
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -74,35 +77,6 @@ namespace SportMap.Infrastructure.Migrations
                     b.HasIndex("OrganizerId");
 
                     b.ToTable("Activities", (string)null);
-                });
-
-            modelBuilder.Entity("SportMap.Core.Entities.Friendship", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<DateTime>("CreatedAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("datetime2")
-                        .HasDefaultValueSql("SYSUTCDATETIME()");
-
-                    b.Property<int>("FolloweeId")
-                        .HasColumnType("int");
-
-                    b.Property<int>("FollowerId")
-                        .HasColumnType("int");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("FolloweeId");
-
-                    b.HasIndex("FollowerId", "FolloweeId")
-                        .IsUnique();
-
-                    b.ToTable("Friendships", (string)null);
                 });
 
             modelBuilder.Entity("SportMap.Core.Entities.Location", b =>
@@ -357,19 +331,14 @@ namespace SportMap.Infrastructure.Migrations
                         .HasColumnType("datetime2")
                         .HasDefaultValueSql("SYSUTCDATETIME()");
 
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
-
                     b.Property<int>("UserId")
                         .HasColumnType("int");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("ActivityId");
+                    b.HasIndex("UserId");
 
-                    b.HasIndex("UserId", "ActivityId")
+                    b.HasIndex("ActivityId", "UserId")
                         .IsUnique();
 
                     b.ToTable("Participations", (string)null);
@@ -425,13 +394,6 @@ namespace SportMap.Infrastructure.Migrations
                     b.Property<DateTime?>("RefreshTokenExpiry")
                         .HasColumnType("datetime2");
 
-                    b.Property<string>("Role")
-                        .IsRequired()
-                        .ValueGeneratedOnAdd()
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)")
-                        .HasDefaultValue("User");
-
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime2");
 
@@ -468,25 +430,6 @@ namespace SportMap.Infrastructure.Migrations
                     b.Navigation("Location");
 
                     b.Navigation("Organizer");
-                });
-
-            modelBuilder.Entity("SportMap.Core.Entities.Friendship", b =>
-                {
-                    b.HasOne("SportMap.Core.Entities.User", "Followee")
-                        .WithMany()
-                        .HasForeignKey("FolloweeId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("SportMap.Core.Entities.User", "Follower")
-                        .WithMany()
-                        .HasForeignKey("FollowerId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("Followee");
-
-                    b.Navigation("Follower");
                 });
 
             modelBuilder.Entity("SportMap.Core.Entities.Location", b =>
