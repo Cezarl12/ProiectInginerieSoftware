@@ -16,6 +16,8 @@ public class User
     public string? RefreshToken { get; set; }
     public DateTime? RefreshTokenExpiry { get; set; }
 
+    public UserRole Role { get; set; } = UserRole.User;
+
     public ICollection<Activity> OrganizedActivities { get; set; } = new List<Activity>();
     public ICollection<Participation> Participations { get; set; } = new List<Participation>();
 }
