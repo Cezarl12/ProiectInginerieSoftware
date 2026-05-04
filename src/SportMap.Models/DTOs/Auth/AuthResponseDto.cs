@@ -23,4 +23,8 @@ public class AuthResponseDto
 
     /// <summary>Data și ora expirării refresh token-ului (UTC).</summary>
     public DateTime RefreshTokenExpiry { get; set; }
+
+    /// <summary>Rolul utilizatorului: User sau Admin.</summary>
+    /// <example>User</example>
+    public string Role { get; set; } = "User";
 }

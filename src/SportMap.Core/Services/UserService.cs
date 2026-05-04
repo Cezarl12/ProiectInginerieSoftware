@@ -1,6 +1,8 @@
+using SportMap.Core.Entities;
 using SportMap.Core.Exceptions;
 using SportMap.Core.Interfaces.Repositories;
 using SportMap.Core.Interfaces.Services;
+using SportMap.Models.Common;
 using SportMap.Models.DTOs.Users;
 
 namespace SportMap.Core.Services;
@@ -22,10 +24,29 @@ public class UserService : IUserService
         return user is null ? null : MapToDto(user);
     }
 
-    public async Task<IEnumerable<UserDto>> GetAllAsync()
+    public async Task<PagedResult<UserDto>> GetAllAsync(PaginationQuery pagination)
     {
-        var users = await _userRepository.GetAllAsync();
-        return users.Select(MapToDto);
+        var (users, total) = await _userRepository.GetAllAsync(pagination.Page, pagination.PageSize);
+        return new PagedResult<UserDto>
+        {
+            Items = users.Select(MapToDto),
+            Page = pagination.Page,
+            PageSize = pagination.PageSize,
+            TotalCount = total
+        };
+    }
+
+    public async Task PromoteToAdminAsync(int targetUserId)
+    {
+        var user = await _userRepository.GetByIdAsync(targetUserId)
+            ?? throw new NotFoundException($"User with ID {targetUserId} not found.");
+
+        if (user.Role == UserRole.Admin)
+            throw new ConflictException("Already an admin.");
+
+        user.Role = UserRole.Admin;
+        user.UpdatedAt = DateTime.UtcNow;
+        await _userRepository.UpdateAsync(user);
     }
 
     public async Task<UserDto> UpdateAsync(int id, UpdateUserDto dto)
@@ -80,6 +101,7 @@ public class UserService : IUserService
         Email = user.Email,
         ProfilePhotoUrl = user.ProfilePhotoUrl,
         FavoriteSports = user.FavoriteSports,
-        CreatedAt = user.CreatedAt
+        CreatedAt = user.CreatedAt,
+        Role = user.Role.ToString()
     };
 }

@@ -128,7 +128,8 @@ public class AuthService : IAuthService
             Token = token,
             ExpiresAt = expiresAt,
             RefreshToken = refreshToken,
-            RefreshTokenExpiry = refreshExpiry
+            RefreshTokenExpiry = refreshExpiry,
+            Role = user.Role.ToString()
         };
     }
 }

@@ -188,6 +188,17 @@ SportMap/
    dotnet build
    ```
 
+6. **Default Admin Account**
+
+   La primul run, aplicația creează automat un cont de admin:
+
+   | Câmp | Valoare |
+   |------|---------|
+   | Email | `admin@sportmap.local` |
+   | Password | `Admin123!` |
+
+   > **Important:** Schimbă această parolă imediat în producție via `POST /api/users/me/change-password` după autentificare cu contul admin.
+
 ---
 
 ## Rulare
@@ -497,6 +508,19 @@ Autentificarea folosește **JWT Bearer** semnat cu **HMAC-SHA256**. Parolele sun
   "message": "Invalid credentials."
 }
 ```
+
+---
+
+## Future Implementations
+
+Backend-ul implementează fluxurile de bază pentru MVP-ul platformei. Următoarele funcționalități sunt proiectate în schema bazei de date și planificate pentru iterații viitoare:
+
+- **Group Chats per activity** — chat pentru participanții fiecărui eveniment
+- **Direct Messaging** — conversații 1-la-1 între utilizatori
+- **Notifications system** — alerte în timp real (join, urmărire, aprobare locație)
+- **Email integration cu SendGrid** — verificare email, resetare parolă
+- **Real-time updates cu SignalR** — chat live, notificări live
+- **Mobile app** — Ionic sau React Native, consumând același API
 
 ---
 

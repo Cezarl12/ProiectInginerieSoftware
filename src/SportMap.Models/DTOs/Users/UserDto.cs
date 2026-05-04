@@ -21,4 +21,8 @@ public class UserDto
 
     /// <summary>Data înregistrării contului (UTC).</summary>
     public DateTime CreatedAt { get; set; }
+
+    /// <summary>Rolul utilizatorului în platformă: User sau Admin.</summary>
+    /// <example>User</example>
+    public string Role { get; set; } = "User";
 }

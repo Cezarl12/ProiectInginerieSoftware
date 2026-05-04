@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SportMap.Core.Exceptions;
 using SportMap.Core.Interfaces.Services;
+using SportMap.Models.Common;
 using SportMap.Models.DTOs.Activities;
 using SportMap.Models.DTOs.Users;
 using Swashbuckle.AspNetCore.Annotations;
@@ -30,12 +31,12 @@ public class UsersController : ControllerBase
     [SwaggerOperation(
         Summary = "Listă utilizatori",
         Description = "Returnează toți utilizatorii înregistrați. **Necesită autentificare.**")]
-    [SwaggerResponse(200, "Listă utilizatori", typeof(IEnumerable<UserDto>))]
+    [SwaggerResponse(200, "Pagină utilizatori", typeof(PagedResult<UserDto>))]
     [SwaggerResponse(401, "Neautentificat")]
-    [ProducesResponseType(typeof(IEnumerable<UserDto>), StatusCodes.Status200OK)]
-    public async Task<ActionResult<IEnumerable<UserDto>>> GetAll()
+    [ProducesResponseType(typeof(PagedResult<UserDto>), StatusCodes.Status200OK)]
+    public async Task<ActionResult<PagedResult<UserDto>>> GetAll([FromQuery] PaginationQuery pagination)
     {
-        var users = await _userService.GetAllAsync();
+        var users = await _userService.GetAllAsync(pagination);
         return Ok(users);
     }
 
@@ -137,6 +138,24 @@ public class UsersController : ControllerBase
 
         var activities = await _activityService.GetByUserIdAsync(id);
         return Ok(activities);
+    }
+
+    /// <summary>Promovează un utilizator la rolul de Admin. [Admin only]</summary>
+    [HttpPost("{id:int}/promote-to-admin")]
+    [Authorize(Roles = "Admin")]
+    [SwaggerOperation(
+        Summary = "Promovare Admin",
+        Description = "Schimbă rolul utilizatorului specificat din User în Admin. **Necesită rol Admin.**")]
+    [SwaggerResponse(204, "Utilizator promovat cu succes")]
+    [SwaggerResponse(401, "Neautentificat")]
+    [SwaggerResponse(403, "Nu ai rol Admin")]
+    [SwaggerResponse(404, "Utilizator inexistent")]
+    [SwaggerResponse(409, "Utilizatorul este deja Admin")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    public async Task<IActionResult> PromoteToAdmin(int id)
+    {
+        await _userService.PromoteToAdminAsync(id);
+        return NoContent();
     }
 
     private int GetCurrentUserId()

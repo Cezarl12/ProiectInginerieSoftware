@@ -69,7 +69,7 @@ public class ActivityRepository : IActivityRepository
             .Include(a => a.Organizer)
             .Include(a => a.Location)
             .Include(a => a.Participations)
-            .Where(a => a.Participations.Any(p => p.UserId == userId))
+            .Where(a => a.Participations.Any(p => p.UserId == userId && p.Status == ParticipationStatus.Active))
             .OrderByDescending(a => a.DateTime)
             .ToListAsync();
 

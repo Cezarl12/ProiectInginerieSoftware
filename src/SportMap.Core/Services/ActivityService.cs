@@ -2,6 +2,7 @@ using SportMap.Core.Entities;
 using SportMap.Core.Exceptions;
 using SportMap.Core.Interfaces.Repositories;
 using SportMap.Core.Interfaces.Services;
+using SportMap.Models.Common;
 using SportMap.Models.DTOs.Activities;
 using SportMap.Models.DTOs.Locations;
 using SportMap.Models.DTOs.Users;
@@ -13,23 +14,49 @@ public class ActivityService : IActivityService
 {
     private readonly IActivityRepository _activityRepository;
     private readonly ILocationRepository _locationRepository;
+    private readonly IFriendshipRepository _friendshipRepository;
 
-    public ActivityService(IActivityRepository activityRepository, ILocationRepository locationRepository)
+    public ActivityService(
+        IActivityRepository activityRepository,
+        ILocationRepository locationRepository,
+        IFriendshipRepository friendshipRepository)
     {
         _activityRepository = activityRepository;
         _locationRepository = locationRepository;
+        _friendshipRepository = friendshipRepository;
     }
 
-    public async Task<IEnumerable<ActivityDto>> GetAllAsync(ActivityFilterDto filter)
+    public async Task<PagedResult<ActivityDto>> GetAllAsync(ActivityFilterDto filter, int currentUserId, PaginationQuery pagination)
     {
         var activities = await _activityRepository.GetAllAsync(filter);
-        return activities.Select(MapToDto);
+        var followeeIds = await _friendshipRepository.GetFolloweeIdsAsync(currentUserId);
+        var filtered = activities
+            .Where(a => a.Type == ActivityType.Public
+                     || a.OrganizerId == currentUserId
+                     || followeeIds.Contains(a.OrganizerId))
+            .ToList();
+
+        return new PagedResult<ActivityDto>
+        {
+            Items = filtered.Skip((pagination.Page - 1) * pagination.PageSize).Take(pagination.PageSize).Select(MapToDto),
+            Page = pagination.Page,
+            PageSize = pagination.PageSize,
+            TotalCount = filtered.Count
+        };
     }
 
-    public async Task<ActivityDto?> GetByIdAsync(int id)
+    public async Task<ActivityDto?> GetByIdAsync(int id, int currentUserId)
     {
         var activity = await _activityRepository.GetByIdWithDetailsAsync(id);
-        return activity is null ? null : MapToDto(activity);
+        if (activity is null) return null;
+
+        if (activity.Type == ActivityType.Private && activity.OrganizerId != currentUserId)
+        {
+            if (!await _friendshipRepository.ExistsAsync(currentUserId, activity.OrganizerId))
+                throw new UnauthorizedException("This activity is private.");
+        }
+
+        return MapToDto(activity);
     }
 
     public async Task<IEnumerable<ActivityDto>> GetOrganizedByUserAsync(int userId)
@@ -131,7 +158,7 @@ public class ActivityService : IActivityService
         Description = a.Description,
         OrganizerId = a.OrganizerId,
         LocationId = a.LocationId,
-        ParticipantCount = a.Participations.Count,
+        ParticipantCount = a.Participations.Count(p => p.Status == ParticipationStatus.Active),
         CreatedAt = a.CreatedAt,
         UpdatedAt = a.UpdatedAt,
         Organizer = a.Organizer is null ? null : new UserDto
@@ -150,7 +177,11 @@ public class ActivityService : IActivityService
             Address = a.Location.Address,
             Latitude = a.Location.Latitude,
             Longitude = a.Location.Longitude,
-            Status = a.Location.Status,
+            Sports = a.Location.Sports,
+            Surface = a.Location.Surface,
+            HasLights = a.Location.HasLights,
+            Status = a.Location.Status.ToString(),
+            ProposedByUserId = a.Location.ProposedByUserId,
             CreatedAt = a.Location.CreatedAt
         }
     };

@@ -23,8 +23,16 @@ public class UserRepository : IUserRepository
     public async Task<User?> GetByUsernameAsync(string username) =>
         await _context.Users.FirstOrDefaultAsync(u => u.Username == username);
 
-    public async Task<IEnumerable<User>> GetAllAsync() =>
-        await _context.Users.AsNoTracking().ToListAsync();
+    public async Task<(IEnumerable<User> Items, int TotalCount)> GetAllAsync(int page, int pageSize)
+    {
+        var query = _context.Users.AsNoTracking();
+        var total = await query.CountAsync();
+        var items = await query.OrderBy(u => u.Username)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync();
+        return (items, total);
+    }
 
     public async Task<User> AddAsync(User user)
     {

@@ -1,17 +1,32 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using Serilog;
+using Serilog.Events;
 using SportMap.API.Middleware;
 using SportMap.API.Swagger;
 using SportMap.Core.Interfaces.Repositories;
 using SportMap.Core.Interfaces.Services;
 using SportMap.Core.Services;
 using SportMap.Infrastructure;
+using SportMap.Infrastructure.Data;
 using SportMap.Infrastructure.Email;
 using SportMap.Infrastructure.Security;
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
 using System.Text;
 
+Log.Logger = new LoggerConfiguration()
+    .MinimumLevel.Information()
+    .MinimumLevel.Override("Microsoft.AspNetCore", LogEventLevel.Warning)
+    .Enrich.FromLogContext()
+    .WriteTo.Console()
+    .WriteTo.File("Logs/sportmap-.log", rollingInterval: RollingInterval.Day)
+    .CreateLogger();
+
 var builder = WebApplication.CreateBuilder(args);
+builder.Host.UseSerilog();
 
 // ---------- Services ----------
 builder.Services.AddControllers();
@@ -29,6 +44,9 @@ builder.Services.AddScoped<IAuthService>(sp => new AuthService(
     builder.Configuration["App:BaseUrl"] ?? "http://localhost:5000"));
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IActivityService, ActivityService>();
+builder.Services.AddScoped<ILocationService, LocationService>();
+builder.Services.AddScoped<IParticipationService, ParticipationService>();
+builder.Services.AddScoped<IFriendshipService, FriendshipService>();
 
 // JWT authentication
 var jwtSettings = builder.Configuration.GetSection("Jwt").Get<JwtSettings>()!;
@@ -45,7 +63,9 @@ builder.Services
             ValidIssuer = jwtSettings.Issuer,
             ValidAudience = jwtSettings.Audience,
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings.Secret)),
-            ClockSkew = TimeSpan.FromMinutes(1)
+            ClockSkew = TimeSpan.FromMinutes(1),
+            NameClaimType = JwtRegisteredClaimNames.Sub,
+            RoleClaimType = ClaimTypes.Role
         };
     });
 
@@ -126,6 +146,15 @@ builder.Services.AddSwaggerGen(c =>
 });
 
 var app = builder.Build();
+
+// ---------- Startup: migrations + seeder ----------
+using (var scope = app.Services.CreateScope())
+{
+    var context = scope.ServiceProvider.GetRequiredService<SportMapDbContext>();
+    var hasher = scope.ServiceProvider.GetRequiredService<IPasswordHasher>();
+    await context.Database.MigrateAsync();
+    await DbSeeder.SeedAdminAsync(context, hasher);
+}
 
 // ---------- Pipeline ----------
 if (app.Environment.IsDevelopment())

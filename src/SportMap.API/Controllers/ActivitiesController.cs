@@ -2,7 +2,9 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SportMap.Core.Exceptions;
 using SportMap.Core.Interfaces.Services;
+using SportMap.Models.Common;
 using SportMap.Models.DTOs.Activities;
+using SportMap.Models.DTOs.Users;
 using Swashbuckle.AspNetCore.Annotations;
 using System.Security.Claims;
 
@@ -17,23 +19,27 @@ namespace SportMap.API.Controllers;
 public class ActivitiesController : ControllerBase
 {
     private readonly IActivityService _activityService;
+    private readonly IParticipationService _participationService;
 
-    public ActivitiesController(IActivityService activityService)
+    public ActivitiesController(IActivityService activityService, IParticipationService participationService)
     {
         _activityService = activityService;
+        _participationService = participationService;
     }
 
     /// <summary>Listează activitățile cu filtre opționale.</summary>
     [HttpGet]
     [SwaggerOperation(
         Summary = "Listă activități",
-        Description = "Returnează toate activitățile, cu filtrare opțională după sport, tip, interval de date și locație. **Necesită autentificare.**")]
-    [SwaggerResponse(200, "Listă activități", typeof(IEnumerable<ActivityDto>))]
+        Description = "Returnează activitățile vizibile curentului utilizator: toate Public + Private proprii sau ale celor urmăriți. " +
+                      "Filtrare opțională după sport, tip, interval de date și locație. **Necesită autentificare.**")]
+    [SwaggerResponse(200, "Pagină activități", typeof(PagedResult<ActivityDto>))]
     [SwaggerResponse(401, "Neautentificat")]
-    [ProducesResponseType(typeof(IEnumerable<ActivityDto>), StatusCodes.Status200OK)]
-    public async Task<ActionResult<IEnumerable<ActivityDto>>> GetAll([FromQuery] ActivityFilterDto filter)
+    [ProducesResponseType(typeof(PagedResult<ActivityDto>), StatusCodes.Status200OK)]
+    public async Task<ActionResult<PagedResult<ActivityDto>>> GetAll([FromQuery] ActivityFilterDto filter, [FromQuery] PaginationQuery pagination)
     {
-        var activities = await _activityService.GetAllAsync(filter);
+        var userId = GetCurrentUserId();
+        var activities = await _activityService.GetAllAsync(filter, userId, pagination);
         return Ok(activities);
     }
 
@@ -71,15 +77,17 @@ public class ActivitiesController : ControllerBase
     [HttpGet("{id:int}")]
     [SwaggerOperation(
         Summary = "Detalii activitate",
-        Description = "Returnează activitatea cu Organizer și Location incluse. **Necesită autentificare.**")]
+        Description = "Returnează activitatea cu Organizer și Location incluse. " +
+                      "Activitățile Private sunt vizibile doar organizatorului sau urmăritorilor acestuia. **Necesită autentificare.**")]
     [SwaggerResponse(200, "Activitate găsită", typeof(ActivityDto))]
-    [SwaggerResponse(401, "Neautentificat")]
+    [SwaggerResponse(401, "Neautentificat sau activitate privată inaccesibilă")]
     [SwaggerResponse(404, "Activitate inexistentă")]
     [ProducesResponseType(typeof(ActivityDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<ActivityDto>> GetById(int id)
     {
-        var activity = await _activityService.GetByIdAsync(id);
+        var userId = GetCurrentUserId();
+        var activity = await _activityService.GetByIdAsync(id, userId);
         return activity is null ? NotFound() : Ok(activity);
     }
 
@@ -142,6 +150,72 @@ public class ActivitiesController : ControllerBase
         var userId = GetCurrentUserId();
         await _activityService.DeleteAsync(id, userId);
         return Ok(new { message = "Activity deleted successfully." });
+    }
+
+    /// <summary>Înscrie utilizatorul curent la o activitate.</summary>
+    [HttpPost("{id:int}/join")]
+    [SwaggerOperation(
+        Summary = "Join activitate",
+        Description = "Înscrie utilizatorul autentificat la activitate. " +
+                      "Eșuează dacă activitatea este în trecut, plină, privată (și nu ești organizatorul) sau ești deja înscris. **Necesită autentificare.**")]
+    [SwaggerResponse(204, "Înscris cu succes")]
+    [SwaggerResponse(400, "Activitate în trecut")]
+    [SwaggerResponse(401, "Neautentificat sau activitate privată")]
+    [SwaggerResponse(404, "Activitate inexistentă")]
+    [SwaggerResponse(409, "Deja înscris sau activitate plină")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    public async Task<IActionResult> Join(int id)
+    {
+        var userId = GetCurrentUserId();
+        await _participationService.JoinAsync(userId, id);
+        return NoContent();
+    }
+
+    /// <summary>Părăsește o activitate.</summary>
+    [HttpDelete("{id:int}/leave")]
+    [SwaggerOperation(
+        Summary = "Leave activitate",
+        Description = "Marchează participarea utilizatorului curent ca Left. " +
+                      "Eșuează dacă nu ești participant activ. **Necesită autentificare.**")]
+    [SwaggerResponse(204, "Participare anulată")]
+    [SwaggerResponse(401, "Neautentificat")]
+    [SwaggerResponse(404, "Nu ești parte din această activitate")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    public async Task<IActionResult> Leave(int id)
+    {
+        var userId = GetCurrentUserId();
+        await _participationService.LeaveAsync(userId, id);
+        return NoContent();
+    }
+
+    /// <summary>Returnează lista participanților activi ai unei activități.</summary>
+    [HttpGet("{id:int}/participants")]
+    [SwaggerOperation(
+        Summary = "Participanți activitate",
+        Description = "Returnează toți utilizatorii cu participare activă la activitate. **Necesită autentificare.**")]
+    [SwaggerResponse(200, "Pagină participanți", typeof(PagedResult<UserDto>))]
+    [SwaggerResponse(401, "Neautentificat")]
+    [ProducesResponseType(typeof(PagedResult<UserDto>), StatusCodes.Status200OK)]
+    public async Task<ActionResult<PagedResult<UserDto>>> GetParticipants(int id, [FromQuery] PaginationQuery pagination)
+    {
+        var participants = await _participationService.GetParticipantsAsync(id, pagination);
+        return Ok(participants);
+    }
+
+    /// <summary>Elimină un participant dintr-o activitate.</summary>
+    [HttpPost("{id:int}/participants/{userId:int}/remove")]
+    [SwaggerOperation(
+        Summary = "Elimină participant",
+        Description = "Permite organizatorului să elimine un participant activ din activitate. **Necesită autentificare.**")]
+    [SwaggerResponse(204, "Participant eliminat")]
+    [SwaggerResponse(401, "Neautentificat sau nu ești organizatorul")]
+    [SwaggerResponse(404, "Activitate inexistentă sau participant nu e activ")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    public async Task<IActionResult> RemoveParticipant(int id, int userId)
+    {
+        var organizerId = GetCurrentUserId();
+        await _participationService.RemoveParticipantAsync(organizerId, id, userId);
+        return NoContent();
     }
 
     private int GetCurrentUserId()
