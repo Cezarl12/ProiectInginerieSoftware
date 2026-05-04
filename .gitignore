@@ -43,3 +43,6 @@ appsettings.*.json
 Thumbs.db
 ## Claude
 .claude/
+# Runtime logs
+run_err.txt
+run_out.txt
