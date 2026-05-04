@@ -1,3 +1,154 @@
-@import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap');
 
-/* You can add global styles to this file, and also import other style files */
+@import "tailwindcss";
+@plugin "@tailwindcss/forms";
+
+/* ── Kinetic Gallery palette ── */
+@theme {
+  /* Surface system - "Stack of fine paper" */
+  --color-background: #f8f9fa;
+  --color-surface: #f8f9fa;
+  --color-surface-bright: #f8f9fa;
+  --color-surface-dim: #d1dce0;
+  --color-surface-container-lowest: #ffffff;
+  --color-surface-container-low: #f1f4f6;
+  --color-surface-container: #ebeff1;
+  --color-surface-container-high: #e3e9ec;
+  --color-surface-container-highest: #dde2e5;
+  --color-surface-variant: #dbe4e7;
+
+  /* Text on surfaces - "Ink-like charcoal, never pure black" */
+  --color-on-surface: #2b3437;
+  --color-on-surface-variant: #586064;
+  --color-on-background: #2b3437;
+
+  /* Primary */
+  --color-primary: #5d5e61;
+  --color-primary-dim: #515255;
+  --color-primary-container: #e2e2e5;
+  --color-on-primary: #f7f7fa;
+  --color-on-primary-fixed: #3e3f42;
+  --color-inverse-primary: #f9f9fc;
+
+  /* Sport accents - "Functional beacons" */
+  --color-sport-tennis: #FFEB3B;
+  --color-sport-padel: #2196F3;
+  --color-sport-football: #4CAF50;
+  --color-sport-running: #FF7043;
+  --color-sport-basketball: #FF5722;
+  --color-sport-swimming: #00BCD4;
+  --color-sport-yoga: #9C27B0;
+
+  /* Tertiary (links, accents) */
+  --color-tertiary: #0062a5;
+  --color-tertiary-fixed: #2498f5;
+  --color-tertiary-fixed-dim: #008ae5;
+
+  /* Secondary (success states) */
+  --color-secondary: #006f1d;
+  --color-secondary-dim: #006118;
+
+  /* Error */
+  --color-error: #9f403d;
+  --color-error-container: #fe8983;
+  --color-on-error-container: #752121;
+
+  /* Outlines - "Ghost border" rule */
+  --color-outline-variant: #abb3b7;
+
+  /* Typography */
+  --font-sans: 'Inter', system-ui, sans-serif;
+
+  /* Border radius */
+  --radius-lg: 2rem;
+  --radius-xl: 3rem;
+
+  /* Shadows */
+  --shadow-ambient: 0 0 60px 0 rgba(43, 52, 55, 0.05);
+  --shadow-lift: 0 4px 40px 0 rgba(43, 52, 55, 0.06);
+}
+
+@layer base {
+  html, body {
+    @apply bg-background text-on-surface font-sans antialiased;
+    font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+  }
+
+  /* Display typography (Big Moments) */
+  .text-display-lg {
+    @apply text-6xl font-extrabold tracking-tight;
+    letter-spacing: -0.02em;
+  }
+  .text-display-md {
+    @apply text-5xl font-bold tracking-tight;
+    letter-spacing: -0.02em;
+  }
+
+  /* Headlines */
+  .text-headline-lg { @apply text-4xl font-bold; }
+  .text-headline-md { @apply text-3xl font-bold; }
+
+  /* Titles */
+  .text-title-sm { @apply text-sm font-semibold uppercase tracking-wider; }
+
+  /* Labels */
+  .text-label-sm { @apply text-xs font-semibold uppercase tracking-widest; }
+}
+
+@layer components {
+  /* Primary button - rounded-full pill, charcoal fill */
+  .btn-primary {
+    @apply bg-primary text-on-primary rounded-full px-8 py-4
+           font-semibold transition-all hover:bg-primary-dim
+           active:scale-95 disabled:opacity-50;
+  }
+
+  /* Secondary button - white background, ghost border */
+  .btn-secondary {
+    @apply bg-surface-container-lowest text-on-surface rounded-full
+           px-8 py-4 font-semibold transition-all
+           hover:bg-surface-container-low active:scale-95;
+  }
+
+  /* Sport chip */
+  .sport-chip {
+    @apply inline-flex items-center gap-2 bg-surface-container-highest
+           text-on-surface rounded-full px-4 py-2 text-sm font-medium
+           transition-all;
+  }
+
+  .sport-chip-active {
+    @apply bg-primary text-on-primary;
+  }
+
+  /* Live dot - 4px circle for sport chips */
+  .live-dot {
+    @apply inline-block w-2 h-2 rounded-full;
+  }
+
+  /* Input field - "No border on focus, background shift" */
+  .input-field {
+    @apply bg-surface-container-low text-on-surface rounded-full
+           px-6 py-4 w-full transition-all border-0 outline-none
+           placeholder:text-on-surface-variant
+           focus:bg-surface-container-lowest focus:shadow-ambient;
+  }
+
+  /* Card - main surface */
+  .card {
+    @apply bg-surface-container-lowest rounded-xl p-6;
+  }
+
+  /* Bottom nav (mobile) */
+  .bottom-nav {
+    @apply fixed bottom-0 left-0 right-0 bg-surface-container-lowest
+           rounded-t-xl px-6 py-4 flex items-center justify-around
+           shadow-lift;
+  }
+
+  /* Material Symbols helper */
+  .material-symbols-outlined {
+    font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+  }
+}
