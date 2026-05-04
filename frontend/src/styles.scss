@@ -48,13 +48,40 @@
   /* Secondary (success states) */
   --color-secondary: #006f1d;
   --color-secondary-dim: #006118;
+  --color-secondary-container: #94f990;
+  --color-secondary-fixed: #94f990;
+  --color-secondary-fixed-dim: #86eb83;
+  --color-on-secondary: #eaffe2;
+  --color-on-secondary-fixed: #004a10;
+  --color-on-secondary-container: #006017;
+
+  /* Primary extended */
+  --color-primary-fixed: #e2e2e5;
+  --color-primary-fixed-dim: #d4d4d7;
+  --color-on-primary-container: #505254;
+  --color-on-primary-fixed-variant: #5a5c5e;
+  --color-surface-tint: #5d5e61;
+
+  /* Tertiary extended */
+  --color-tertiary-container: #2498f5;
+  --color-tertiary-dim: #005691;
+  --color-on-tertiary: #f7f9ff;
+  --color-on-tertiary-fixed: #000000;
+  --color-on-tertiary-fixed-variant: #00203c;
+
+  /* Inverse */
+  --color-inverse-surface: #0c0f10;
+  --color-inverse-on-surface: #9b9d9e;
 
   /* Error */
   --color-error: #9f403d;
+  --color-error-dim: #4e0309;
   --color-error-container: #fe8983;
+  --color-on-error: #fff7f6;
   --color-on-error-container: #752121;
 
   /* Outlines - "Ghost border" rule */
+  --color-outline: #737c7f;
   --color-outline-variant: #abb3b7;
 
   /* Typography */
