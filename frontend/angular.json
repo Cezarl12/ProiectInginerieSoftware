@@ -30,7 +30,7 @@
               }
             ],
             "styles": [
-              "src/styles.scss",
+              "src/styles.out.css",
               "node_modules/leaflet/dist/leaflet.css"
             ]
           },

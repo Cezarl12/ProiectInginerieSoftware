@@ -2,20 +2,21 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
 import type { Activity, CreateActivityDto, UpdateActivityDto, ActivityFilter } from '../models/activity.model';
+import type { PagedResult } from '../models/location.model';
 
 @Injectable({ providedIn: 'root' })
 export class ActivitiesService {
   private http = inject(HttpClient);
   private base = `${environment.apiUrl}/activities`;
 
-  getAll(filter?: ActivityFilter) {
-    let params = new HttpParams();
+  getAll(filter?: ActivityFilter, page = 1, pageSize = 50) {
+    let params = new HttpParams().set('page', page).set('pageSize', pageSize);
     if (filter?.sport) params = params.set('sport', filter.sport);
     if (filter?.type != null) params = params.set('type', filter.type);
     if (filter?.fromDate) params = params.set('fromDate', filter.fromDate);
     if (filter?.toDate) params = params.set('toDate', filter.toDate);
     if (filter?.locationId) params = params.set('locationId', filter.locationId);
-    return this.http.get<Activity[]>(this.base, { params });
+    return this.http.get<PagedResult<Activity>>(this.base, { params });
   }
 
   getById(id: number) {

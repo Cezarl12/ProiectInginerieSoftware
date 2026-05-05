@@ -1,0 +1,174 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap');
+
+@import "tailwindcss";
+@plugin "@tailwindcss/forms";
+
+/* ── SportMap blue palette ── */
+@theme {
+  /* Surfaces — light sky tint */
+  --color-background: #f0f7ff;
+  --color-surface: #f0f7ff;
+  --color-surface-bright: #f8fbff;
+  --color-surface-dim: #b8ccf4;
+  --color-surface-container-lowest: #ffffff;
+  --color-surface-container-low: #eaf1ff;
+  --color-surface-container: #dde8ff;
+  --color-surface-container-high: #d0deff;
+  --color-surface-container-highest: #c3d3ff;
+  --color-surface-variant: #cde0ff;
+
+  /* Text — navy-tinted dark */
+  --color-on-surface: #0e1d4a;
+  --color-on-surface-variant: #3d4f7a;
+  --color-on-background: #0e1d4a;
+
+  /* Primary — sky blue */
+  --color-primary: #1a6ef5;
+  --color-primary-dim: #1259d5;
+  --color-primary-container: #d0e4ff;
+  --color-on-primary: #ffffff;
+  --color-on-primary-fixed: #00297a;
+  --color-inverse-primary: #9ec5ff;
+
+  /* Sport accents */
+  --color-sport-tennis: #FFEB3B;
+  --color-sport-padel: #00897B;
+  --color-sport-football: #43A047;
+  --color-sport-running: #FF7043;
+  --color-sport-basketball: #FF9800;
+  --color-sport-swimming: #00BCD4;
+  --color-sport-yoga: #9C27B0;
+
+  /* Tertiary — link / accent blue */
+  --color-tertiary: #0052cc;
+  --color-tertiary-fixed: #4e8cf8;
+  --color-tertiary-fixed-dim: #1a6ef5;
+
+  /* Secondary — success green */
+  --color-secondary: #006f1d;
+  --color-secondary-dim: #006118;
+  --color-secondary-container: #94f990;
+  --color-secondary-fixed: #94f990;
+  --color-secondary-fixed-dim: #86eb83;
+  --color-on-secondary: #eaffe2;
+  --color-on-secondary-fixed: #004a10;
+  --color-on-secondary-container: #006017;
+
+  /* Primary extended */
+  --color-primary-fixed: #d0e4ff;
+  --color-primary-fixed-dim: #b8d2ff;
+  --color-on-primary-container: #1259d5;
+  --color-on-primary-fixed-variant: #1a6ef5;
+  --color-surface-tint: #1a6ef5;
+
+  /* Tertiary extended */
+  --color-tertiary-container: #4e8cf8;
+  --color-tertiary-dim: #003fa0;
+  --color-on-tertiary: #ffffff;
+  --color-on-tertiary-fixed: #000000;
+  --color-on-tertiary-fixed-variant: #001f6e;
+
+  /* Inverse */
+  --color-inverse-surface: #0a1535;
+  --color-inverse-on-surface: #8aaedf;
+
+  /* Error */
+  --color-error: #9f403d;
+  --color-error-dim: #4e0309;
+  --color-error-container: #fe8983;
+  --color-on-error: #fff7f6;
+  --color-on-error-container: #752121;
+
+  /* Outline */
+  --color-outline: #5168a0;
+  --color-outline-variant: #8fadd8;
+
+  /* Typography */
+  --font-sans: 'Inter', system-ui, sans-serif;
+
+  /* Border radius */
+  --radius-lg: 2rem;
+  --radius-xl: 3rem;
+
+  /* Shadows */
+  --shadow-ambient: 0 0 60px 0 rgba(26, 110, 245, 0.06);
+  --shadow-lift: 0 4px 40px 0 rgba(26, 110, 245, 0.08);
+}
+
+@layer base {
+  html, body {
+    @apply bg-background text-on-surface font-sans antialiased;
+    font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+  }
+
+  .text-display-lg {
+    @apply text-6xl font-extrabold tracking-tight;
+    letter-spacing: -0.02em;
+  }
+  .text-display-md {
+    @apply text-5xl font-bold tracking-tight;
+    letter-spacing: -0.02em;
+  }
+
+  .text-headline-lg { @apply text-4xl font-bold; }
+  .text-headline-md { @apply text-3xl font-bold; }
+  .text-title-sm { @apply text-sm font-semibold uppercase tracking-wider; }
+  .text-label-sm { @apply text-xs font-semibold uppercase tracking-widest; }
+}
+
+@layer components {
+  .btn-primary {
+    @apply bg-primary text-on-primary rounded-full px-8 py-4
+           font-semibold transition-all hover:bg-primary-dim
+           active:scale-95 disabled:opacity-50;
+  }
+
+  .btn-secondary {
+    @apply bg-surface-container-lowest text-on-surface rounded-full
+           px-8 py-4 font-semibold transition-all
+           hover:bg-surface-container-low active:scale-95;
+  }
+
+  .sport-chip {
+    @apply inline-flex items-center gap-2 bg-surface-container-highest
+           text-on-surface rounded-full px-4 py-2 text-sm font-medium
+           transition-all;
+  }
+
+  .sport-chip-active { @apply bg-primary text-on-primary; }
+  .live-dot { @apply inline-block w-2 h-2 rounded-full; }
+
+  .input-field {
+    @apply bg-surface-container-low text-on-surface rounded-full
+           px-6 py-4 w-full transition-all border-0 outline-none
+           placeholder:text-on-surface-variant
+           focus:bg-surface-container-lowest focus:shadow-ambient;
+  }
+
+  .card { @apply bg-surface-container-lowest rounded-xl p-6; }
+
+  .bottom-nav {
+    @apply fixed bottom-0 left-0 right-0 bg-surface-container-lowest
+           rounded-t-xl px-6 py-4 flex items-center justify-around
+           shadow-lift;
+  }
+
+  .material-symbols-outlined {
+    font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+  }
+}
+
+/* ── Toast animations ── */
+@keyframes toast-slide-in {
+  from { opacity: 0; transform: translateY(-14px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes toast-progress {
+  from { width: 100%; }
+  to   { width: 0%; }
+}
+
+.toast-slide-in  { animation: toast-slide-in 0.28s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+.toast-progress  { animation: toast-progress linear forwards; }

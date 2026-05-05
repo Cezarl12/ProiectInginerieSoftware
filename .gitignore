@@ -22,6 +22,7 @@
 node_modules/
 .angular/
 dist/
+frontend/src/styles.out.css
 .parcel-cache/
 .cache/
 build/

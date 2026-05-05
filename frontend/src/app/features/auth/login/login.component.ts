@@ -1,7 +1,8 @@
-import { Component, signal, inject, ChangeDetectionStrategy } from '@angular/core';
+import { Component, signal, inject, ChangeDetectionStrategy, computed } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink, ActivatedRoute } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
+import { ToastService } from '../../../core/services/toast.service';
 
 @Component({
   selector: 'app-login',
@@ -60,19 +61,26 @@ import { AuthService } from '../../../core/services/auth.service';
                   Forgot?
                 </button>
               </div>
-              <input
-                id="password"
-                type="password"
-                formControlName="password"
-                autocomplete="current-password"
-                placeholder="••••••••"
-                class="w-full h-14 px-4 bg-surface-container-low border-none rounded-lg text-on-surface placeholder:text-outline-variant focus:bg-surface-container-lowest focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all duration-300"
-              />
+              <div class="relative flex items-center">
+                <input
+                  id="password"
+                  [type]="showPassword() ? 'text' : 'password'"
+                  formControlName="password"
+                  autocomplete="current-password"
+                  placeholder="••••••••"
+                  class="w-full h-14 px-4 pr-12 bg-surface-container-low border-none rounded-lg text-on-surface placeholder:text-outline-variant focus:bg-surface-container-lowest focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all duration-300"
+                />
+                <button
+                  type="button"
+                  (click)="showPassword.set(!showPassword())"
+                  class="absolute right-3 p-1.5 text-outline hover:text-on-surface transition-colors"
+                  [attr.aria-label]="showPassword() ? 'Hide password' : 'Show password'"
+                >
+                  <span class="material-symbols-outlined text-[20px]">{{ showPassword() ? 'visibility_off' : 'visibility' }}</span>
+                </button>
+              </div>
             </div>
 
-            @if (error()) {
-              <p class="text-error text-sm text-center px-2">{{ error() }}</p>
-            }
 
             <!-- Login button -->
             <button
@@ -140,6 +148,7 @@ export class LoginComponent {
   private auth = inject(AuthService);
   private router = inject(Router);
   private route = inject(ActivatedRoute);
+  private toast = inject(ToastService);
 
   form = new FormGroup({
     email: new FormControl('', [Validators.required, Validators.email]),
@@ -147,30 +156,39 @@ export class LoginComponent {
   });
 
   loading = signal(false);
-  error = signal('');
+  showPassword = signal(false);
 
   submit(): void {
     if (this.form.invalid) return;
     this.loading.set(true);
-    this.error.set('');
     const { email, password } = this.form.getRawValue();
     this.auth.login({ email: email!, password: password! }).subscribe({
       next: () => {
         const returnUrl = this.route.snapshot.queryParams['returnUrl'] ?? '/home';
         this.router.navigateByUrl(returnUrl);
       },
-      error: () => {
-        this.error.set('Invalid email or password.');
+      error: (err) => {
+        const msg: string = err?.error?.message ?? '';
+        if (msg.toLowerCase().includes('not confirmed') || msg.toLowerCase().includes('not verified')) {
+          this.toast.warning(
+            'Check your inbox and click the confirmation link before logging in.',
+            'Email not verified',
+          );
+        } else if (err?.status === 401) {
+          this.toast.error('Incorrect email or password.', 'Login failed');
+        } else {
+          this.toast.error('Something went wrong. Please try again later.', 'Error');
+        }
         this.loading.set(false);
       },
     });
   }
 
   forgotPassword(): void {
-    console.log('Forgot password — coming soon');
+    this.toast.info('Password reset — coming soon.', 'Forgot password');
   }
 
   loginWithGoogle(): void {
-    console.log('Google OAuth — coming soon');
+    this.toast.info('Google login — coming soon.', 'OAuth');
   }
 }

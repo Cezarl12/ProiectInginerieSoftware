@@ -1,47 +1,86 @@
 import {
-  Component, OnInit, OnDestroy, signal, computed, inject,
-  ChangeDetectionStrategy, ChangeDetectorRef,
+  Component, OnInit, OnDestroy, signal, computed, effect, inject,
+  ChangeDetectionStrategy, DestroyRef,
 } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { catchError, EMPTY } from 'rxjs';
 import { Router, RouterLink } from '@angular/router';
-import { DatePipe, SlicePipe } from '@angular/common';
+import { DatePipe } from '@angular/common';
 import { LeafletModule } from '@bluehalo/ngx-leaflet';
 import * as L from 'leaflet';
 import { BottomNavComponent } from '../../shared/components/bottom-nav/bottom-nav.component';
 import { DesktopHeaderComponent } from '../../shared/components/desktop-header/desktop-header.component';
 import { LocationsService } from '../../core/services/locations.service';
 import { ActivitiesService } from '../../core/services/activities.service';
+import { ToastService } from '../../core/services/toast.service';
 import type { Location } from '../../core/models/location.model';
 import type { Activity } from '../../core/models/activity.model';
 
 const BUCHAREST: L.LatLngExpression = [44.4268, 26.1025];
 
 const SPORT_COLORS: Record<string, string> = {
-  Tennis: '#FFEB3B', Football: '#4CAF50', Basketball: '#FF9800',
-  Padel: '#2196F3', Running: '#FF7043', Swimming: '#00BCD4',
-  Cycling: '#E91E63', Yoga: '#9C27B0', default: '#5d5e61',
+  Tennis:     '#FFEB3B',
+  Football:   '#43A047',
+  Basketball: '#FF9800',
+  Padel:      '#00897B',
+  Running:    '#FF7043',
+  Swimming:   '#00BCD4',
+  Cycling:    '#E91E63',
+  Yoga:       '#9C27B0',
+  default:    '#1a6ef5',
 };
 
 const SPORT_ICONS: Record<string, string> = {
-  Tennis: 'sports_tennis', Football: 'sports_soccer', Basketball: 'sports_basketball',
-  Padel: 'sports_tennis', Running: 'directions_run', Swimming: 'pool',
-  Cycling: 'directions_bike', Yoga: 'self_improvement', default: 'fitness_center',
+  Tennis:     'sports_tennis',
+  Football:   'sports_soccer',
+  Basketball: 'sports_basketball',
+  Padel:      'sports_tennis',
+  Running:    'directions_run',
+  Swimming:   'pool',
+  Cycling:    'directions_bike',
+  Yoga:       'self_improvement',
+  default:    'fitness_center',
 };
 
-const FILTER_CHIPS = ['All', 'Tennis', 'Football', 'Padel', 'Running', 'Swimming'];
+const SPORT_KEYS = Object.keys(SPORT_COLORS).filter(k => k !== 'default');
+const FILTER_CHIPS = ['All', 'Football', 'Tennis', 'Basketball', 'Padel', 'Running', 'Swimming'];
+
+function resolveSport(raw: string): string {
+  const trimmed = raw.trim();
+  return SPORT_KEYS.find(k => k.toLowerCase() === trimmed.toLowerCase()) ?? 'default';
+}
+
+function markerHtml(color: string, icon: string, name: string): string {
+  const textColor = ['#FFEB3B', '#94f990'].includes(color) ? '#0e1d4a' : '#ffffff';
+  const label = name.length > 13 ? name.slice(0, 13) + '…' : name;
+  return `
+    <div style="display:flex;flex-direction:column;align-items:center;cursor:pointer;filter:drop-shadow(0 3px 8px rgba(14,29,74,0.28));">
+      <div style="background:${color};color:${textColor};width:36px;height:36px;border-radius:50%;
+                  display:flex;align-items:center;justify-content:center;
+                  border:2.5px solid rgba(255,255,255,0.9);">
+        <span class="material-symbols-outlined" style="font-size:16px;line-height:1;
+              font-variation-settings:'FILL' 1,'wght' 600,'GRAD' 0,'opsz' 20;">${icon}</span>
+      </div>
+      <div style="margin-top:3px;background:white;padding:1px 7px;border-radius:999px;
+                  box-shadow:0 1px 4px rgba(14,29,74,0.14);font-size:9px;font-weight:700;
+                  font-family:Inter,system-ui,sans-serif;white-space:nowrap;color:#0e1d4a;">
+        ${label}
+      </div>
+    </div>`;
+}
 
 @Component({
   selector: 'app-home',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [LeafletModule, BottomNavComponent, DesktopHeaderComponent, RouterLink, DatePipe, SlicePipe],
+  imports: [LeafletModule, BottomNavComponent, DesktopHeaderComponent, RouterLink, DatePipe],
   template: `
     <div class="h-screen w-full bg-background overflow-hidden flex flex-col">
       <app-desktop-header />
 
-      <!-- Full-height map shell -->
       <div class="relative flex-1 overflow-hidden">
 
-        <!-- Leaflet map (fills entire area) -->
+        <!-- Map -->
         <div
           leaflet
           class="absolute inset-0 z-0"
@@ -49,30 +88,40 @@ const FILTER_CHIPS = ['All', 'Tennis', 'Football', 'Padel', 'Running', 'Swimming
           (leafletMapReady)="onMapReady($event)"
         ></div>
 
-        <!-- Mobile top overlay: search + chips -->
-        <div class="absolute top-0 left-0 w-full z-20 md:hidden p-5 space-y-4 pt-12">
-          <div class="bg-surface-container-lowest/90 backdrop-blur-md rounded-full shadow-lg flex items-center px-4 py-3 gap-3">
-            <span class="material-symbols-outlined text-outline text-[20px]">search</span>
+        <!-- ── MOBILE: top search + chips ── -->
+        <div class="absolute top-0 left-0 w-full z-20 md:hidden px-4 pt-10 pb-3 space-y-3">
+          <!-- Search bar -->
+          <div class="bg-white/95 backdrop-blur-md rounded-2xl shadow-lg flex items-center px-4 py-3 gap-2 border border-outline-variant/10">
+            <span class="material-symbols-outlined text-primary text-[20px] shrink-0">search</span>
             <input
               type="text"
-              placeholder="Search courts, gyms, clubs..."
-              class="bg-transparent border-none focus:ring-0 text-sm font-medium w-full placeholder:text-outline-variant outline-none"
+              [value]="searchQuery()"
+              (input)="searchQuery.set($any($event.target).value)"
+              placeholder="Courts, gyms, clubs…"
+              class="bg-transparent border-none focus:ring-0 text-sm font-medium w-full placeholder:text-outline-variant outline-none text-on-surface"
             />
-            <div class="h-5 w-px bg-outline-variant/30 shrink-0"></div>
-            <button class="text-on-surface p-1 active:scale-95 transition-transform">
-              <span class="material-symbols-outlined text-[20px]">tune</span>
-            </button>
+            @if (searchQuery()) {
+              <button (click)="searchQuery.set('')"
+                class="shrink-0 text-outline hover:text-on-surface transition-colors p-0.5">
+                <span class="material-symbols-outlined text-[18px]">close</span>
+              </button>
+            }
           </div>
-          <div class="flex gap-2 overflow-x-auto pb-2" style="scrollbar-width: none;">
+
+          <!-- Sport filter chips -->
+          <div class="flex gap-2 overflow-x-auto" style="scrollbar-width:none;-webkit-overflow-scrolling:touch;">
             @for (chip of FILTER_CHIPS; track chip) {
               <button
                 (click)="setFilter(chip)"
+                class="flex-shrink-0 flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-bold transition-all active:scale-95"
                 [class]="activeFilter() === chip
-                  ? 'flex-shrink-0 bg-primary text-on-primary px-5 py-2 rounded-full text-xs font-bold tracking-tight shadow-md transition-all'
-                  : 'flex-shrink-0 bg-surface-container-lowest/80 backdrop-blur-md text-on-surface px-5 py-2 rounded-full text-xs font-semibold hover:bg-surface-container-low transition-all flex items-center gap-2'"
+                  ? 'bg-primary text-on-primary shadow-md'
+                  : 'bg-white/90 backdrop-blur-md text-on-surface shadow-sm border border-outline-variant/10'"
               >
-                @if (activeFilter() !== chip && chip !== 'All') {
-                  <span class="w-2 h-2 rounded-full inline-block" [style.background-color]="sportColor(chip)"></span>
+                @if (chip !== 'All') {
+                  <span class="w-2 h-2 rounded-full shrink-0"
+                    [style.background-color]="activeFilter() === chip ? 'rgba(255,255,255,0.6)' : sportColor(chip)">
+                  </span>
                 }
                 {{ chip }}
               </button>
@@ -80,115 +129,199 @@ const FILTER_CHIPS = ['All', 'Tennis', 'Football', 'Padel', 'Running', 'Swimming
           </div>
         </div>
 
-        <!-- Desktop: filter chips overlay (top-left) -->
-        <div class="hidden md:flex absolute top-6 left-6 z-20 gap-3 overflow-x-auto pb-4" style="scrollbar-width: none;">
+        <!-- ── DESKTOP: sport chips (top-left) ── -->
+        <div class="hidden md:flex absolute top-5 left-5 z-20 gap-2.5" style="scrollbar-width:none;">
           @for (chip of FILTER_CHIPS; track chip) {
             <button
               (click)="setFilter(chip)"
+              class="flex items-center gap-2 px-5 py-2 rounded-full text-sm font-semibold transition-all active:scale-95 whitespace-nowrap shadow-sm"
               [class]="activeFilter() === chip
-                ? 'flex items-center gap-2 px-6 py-2.5 bg-primary text-on-primary rounded-full shadow-sm font-medium whitespace-nowrap text-sm'
-                : 'flex items-center gap-2 px-6 py-2.5 bg-surface-container-lowest text-on-surface rounded-full shadow-sm hover:bg-surface-container-low transition-all font-medium whitespace-nowrap text-sm'"
+                ? 'bg-primary text-on-primary shadow-md'
+                : 'bg-white/95 backdrop-blur-md text-on-surface hover:bg-surface-container-low border border-outline-variant/10'"
             >
               @if (chip !== 'All') {
-                <span class="w-2 h-2 rounded-full shrink-0" [style.background-color]="sportColor(chip)"></span>
+                <span class="w-2 h-2 rounded-full shrink-0"
+                  [style.background-color]="activeFilter() === chip ? 'rgba(255,255,255,0.6)' : sportColor(chip)">
+                </span>
               }
               {{ chip }}
             </button>
           }
         </div>
 
-        <!-- Desktop: right sidebar -->
-        <aside class="hidden md:flex absolute top-0 right-0 bottom-0 w-96 p-6 flex-col z-20 pointer-events-none">
-          <div class="flex-1 bg-surface-container-lowest/90 backdrop-blur-xl rounded-xl shadow-2xl flex flex-col overflow-hidden border border-outline-variant/10 pointer-events-auto">
-            <div class="p-6 pb-2">
-              <h2 class="text-2xl font-extrabold tracking-tight text-on-surface">Nearby Activities</h2>
-              <p class="text-sm text-outline font-medium mt-1">{{ activities().length }} found near you</p>
+        <!-- ── DESKTOP: right sidebar ── -->
+        <aside class="hidden md:flex absolute top-0 right-0 bottom-0 w-[360px] p-4 flex-col z-20 pointer-events-none">
+          <div class="flex-1 bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl flex flex-col overflow-hidden border border-outline-variant/10 pointer-events-auto">
+
+            <!-- Sidebar header -->
+            <div class="p-5 pb-3 border-b border-surface-container-low space-y-3">
+              <div class="flex justify-between items-start">
+                <div>
+                  <h2 class="text-xl font-black tracking-tight text-on-surface">Activities</h2>
+                  <p class="text-xs text-outline font-medium mt-0.5">
+                    {{ filteredActivities().length }}
+                    {{ searchQuery() || activeFilter() !== 'All' ? 'matching' : 'nearby' }}
+                  </p>
+                </div>
+                <a routerLink="/activities/create"
+                  class="flex items-center gap-1 bg-primary text-on-primary text-xs font-bold px-4 py-2 rounded-full hover:bg-primary-dim active:scale-95 transition-all">
+                  <span class="material-symbols-outlined text-[16px]">add</span>
+                  Create
+                </a>
+              </div>
+
+              <!-- Desktop search -->
+              <div class="flex items-center gap-2 bg-surface-container-low rounded-xl px-3 py-2.5">
+                <span class="material-symbols-outlined text-primary text-[18px] shrink-0">search</span>
+                <input
+                  type="text"
+                  [value]="searchQuery()"
+                  (input)="searchQuery.set($any($event.target).value)"
+                  placeholder="Search activities or venues…"
+                  class="bg-transparent border-none focus:ring-0 text-sm w-full placeholder:text-outline-variant outline-none text-on-surface"
+                />
+                @if (searchQuery()) {
+                  <button (click)="searchQuery.set('')"
+                    class="shrink-0 text-outline hover:text-on-surface transition-colors">
+                    <span class="material-symbols-outlined text-[16px]">close</span>
+                  </button>
+                }
+              </div>
             </div>
-            <div class="flex-1 overflow-y-auto p-6 space-y-8" style="scrollbar-width: none;">
+
+            <!-- Activity list -->
+            <div class="flex-1 overflow-y-auto px-4 py-3 space-y-2" style="scrollbar-width:thin;scrollbar-color:#d0deff transparent;">
               @for (activity of filteredActivities(); track activity.id) {
-                <div class="group cursor-pointer" (click)="goToActivity(activity.id)">
-                  <div class="flex gap-4">
-                    <div class="w-20 h-20 rounded-lg overflow-hidden shrink-0 bg-surface-container-high flex items-center justify-center">
-                      <span class="material-symbols-outlined text-3xl text-on-surface-variant">{{ sportIcon(activity.sport) }}</span>
+                <div
+                  class="group flex gap-3 p-3 rounded-xl cursor-pointer hover:bg-surface-container-low active:scale-[0.98] transition-all"
+                  (click)="goToActivity(activity.id)"
+                >
+                  <!-- Sport icon box -->
+                  <div class="w-14 h-14 rounded-xl shrink-0 flex items-center justify-center"
+                    [style.background-color]="sportColor(activity.sport) + '22'">
+                    <span class="material-symbols-outlined text-2xl"
+                      [style.color]="sportColor(activity.sport)"
+                      style="font-variation-settings:'FILL' 1,'wght' 500,'GRAD' 0,'opsz' 24;">
+                      {{ sportIcon(activity.sport) }}
+                    </span>
+                  </div>
+
+                  <div class="flex-1 min-w-0">
+                    <div class="flex justify-between items-start gap-1">
+                      <h3 class="font-bold text-on-surface text-sm leading-tight truncate">{{ activity.title }}</h3>
+                      <span class="shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-full"
+                        [style.background-color]="sportColor(activity.sport) + '22'"
+                        [style.color]="sportColor(activity.sport)">
+                        {{ activity.sport }}
+                      </span>
                     </div>
-                    <div class="flex flex-col justify-between flex-1">
-                      <div>
-                        <div class="flex justify-between items-start">
-                          <span class="text-[10px] font-bold uppercase tracking-widest mb-1" [style.color]="sportColor(activity.sport)">{{ activity.sport }}</span>
-                          <span class="text-xs font-bold text-outline">{{ activity.location?.address | slice:0:10 }}</span>
-                        </div>
-                        <h3 class="font-bold text-on-surface leading-tight">{{ activity.title }}</h3>
+                    <div class="flex items-center justify-between mt-1.5">
+                      <div class="flex items-center gap-1 text-xs text-on-surface-variant">
+                        <span class="material-symbols-outlined text-[13px]">schedule</span>
+                        {{ activity.dateTime | date:'EEE d MMM · HH:mm' }}
                       </div>
-                      <div class="flex items-center justify-between mt-2">
-                        <div class="flex items-center gap-1 text-xs text-on-surface-variant font-medium">
-                          <span class="material-symbols-outlined text-sm">schedule</span>
-                          {{ activity.dateTime | date:'HH:mm' }}
-                        </div>
-                        <span class="text-[10px] font-bold text-on-surface-variant">
-                          {{ activity.participantCount }}/{{ activity.maxParticipants }} joined
-                        </span>
-                      </div>
+                      <span class="text-[10px] font-bold text-outline">
+                        {{ activity.participantCount }}/{{ activity.maxParticipants }}
+                        <span class="font-normal">joined</span>
+                      </span>
                     </div>
+                    @if (activity.location?.name) {
+                      <div class="flex items-center gap-1 mt-1 text-[10px] text-outline">
+                        <span class="material-symbols-outlined text-[12px]">location_on</span>
+                        {{ activity.location!.name }}
+                      </div>
+                    }
                   </div>
                 </div>
               }
+
               @if (filteredActivities().length === 0) {
-                <div class="flex flex-col items-center gap-3 py-8 text-on-surface-variant">
-                  <span class="material-symbols-outlined text-4xl">sports</span>
-                  <p class="text-sm">No activities found</p>
+                <div class="flex flex-col items-center gap-3 py-12 text-on-surface-variant">
+                  <div class="w-16 h-16 rounded-2xl bg-surface-container-low flex items-center justify-center">
+                    <span class="material-symbols-outlined text-3xl text-outline">sports</span>
+                  </div>
+                  <p class="text-sm font-medium text-center">
+                    {{ searchQuery() || activeFilter() !== 'All' ? 'No results found' : 'No activities yet' }}
+                  </p>
+                  @if (!searchQuery() && activeFilter() === 'All') {
+                    <a routerLink="/activities/create"
+                      class="text-xs font-bold text-primary hover:underline">
+                      Be the first to create one →
+                    </a>
+                  }
                 </div>
               }
-            </div>
-            <div class="p-6 pt-2 border-t border-surface-container-low">
-              <a routerLink="/activities/create"
-                 class="w-full py-4 bg-primary text-on-primary rounded-full font-bold flex items-center justify-center gap-2 hover:opacity-90 active:scale-95 transition-all">
-                Create Activity
-                <span class="material-symbols-outlined text-[18px]">add</span>
-              </a>
             </div>
           </div>
         </aside>
 
-        <!-- Mobile: bottom pull-up sheet -->
-        <div class="absolute bottom-20 left-0 w-full z-30 md:hidden">
-          <div class="bg-surface-container-low rounded-t-xl shadow-[0_-10px_40px_rgba(0,0,0,0.08)] pb-6">
-            <div class="flex justify-center py-3">
-              <div class="w-10 h-1 bg-outline-variant/40 rounded-full"></div>
+        <!-- ── MOBILE: bottom activities sheet ── -->
+        <div class="absolute bottom-16 left-0 right-0 z-30 md:hidden">
+          <div class="bg-white/95 backdrop-blur-xl rounded-t-2xl shadow-[0_-8px_32px_rgba(14,29,74,0.12)] border-t border-outline-variant/10">
+            <!-- Drag handle -->
+            <div class="flex justify-center pt-3 pb-1">
+              <div class="w-8 h-1 bg-outline-variant/40 rounded-full"></div>
             </div>
-            <div class="px-6 space-y-5">
-              <div class="flex justify-between items-end">
+
+            <div class="px-5 pb-5 space-y-4">
+              <!-- Sheet header -->
+              <div class="flex justify-between items-center">
                 <div>
-                  <h2 class="text-2xl font-black tracking-tight text-on-surface leading-none">Nearby</h2>
-                  <p class="text-xs font-medium text-outline-variant mt-1 uppercase tracking-widest">{{ activities().length }} Activities</p>
+                  <h2 class="text-lg font-black tracking-tight text-on-surface">
+                    {{ activeFilter() === 'All' ? 'Nearby' : activeFilter() }}
+                  </h2>
+                  <p class="text-[10px] font-bold text-outline uppercase tracking-widest">
+                    {{ filteredActivities().length }} activities
+                  </p>
                 </div>
-                <a routerLink="/activities/create" class="text-tertiary text-xs font-bold border-b-2 border-tertiary/20 pb-1">+ Create</a>
+                <a routerLink="/activities/create"
+                  class="flex items-center gap-1 bg-primary text-on-primary text-[10px] font-bold px-3 py-1.5 rounded-full">
+                  <span class="material-symbols-outlined text-[14px]">add</span>
+                  Create
+                </a>
               </div>
-              <div class="flex gap-4 overflow-x-auto pb-4 -mx-6 px-6" style="scrollbar-width: none;">
-                @for (activity of filteredActivities().slice(0, 5); track activity.id) {
+
+              <!-- Horizontal scroll cards -->
+              <div class="flex gap-3 overflow-x-auto -mx-5 px-5 pb-1" style="scrollbar-width:none;-webkit-overflow-scrolling:touch;">
+                @for (activity of filteredActivities().slice(0, 8); track activity.id) {
                   <div
-                    class="min-w-[240px] bg-surface-container-lowest rounded-lg p-3 shadow-sm border border-outline-variant/10 cursor-pointer active:scale-95 transition-all"
+                    class="min-w-[200px] max-w-[200px] bg-surface-container-lowest rounded-xl p-3 shadow-sm border border-outline-variant/10 cursor-pointer active:scale-95 transition-all flex flex-col gap-2"
                     (click)="goToActivity(activity.id)"
                   >
-                    <div class="h-28 w-full rounded-md overflow-hidden mb-3 bg-surface-container-high flex items-center justify-center">
-                      <span class="material-symbols-outlined text-5xl text-on-surface-variant">{{ sportIcon(activity.sport) }}</span>
+                    <!-- Sport header -->
+                    <div class="h-20 rounded-lg flex items-center justify-center"
+                      [style.background-color]="sportColor(activity.sport) + '18'">
+                      <span class="material-symbols-outlined text-4xl"
+                        [style.color]="sportColor(activity.sport)"
+                        style="font-variation-settings:'FILL' 1,'wght' 500,'GRAD' 0,'opsz' 48;">
+                        {{ sportIcon(activity.sport) }}
+                      </span>
                     </div>
+
                     <div class="space-y-1">
-                      <h3 class="font-bold text-on-surface text-sm">{{ activity.title }}</h3>
+                      <h3 class="font-bold text-on-surface text-xs leading-tight line-clamp-2">{{ activity.title }}</h3>
                       <div class="flex items-center gap-1 text-[10px] text-outline">
-                        <span class="material-symbols-outlined text-[14px]">schedule</span>
-                        <span>{{ activity.dateTime | date:'EEE, HH:mm' }}</span>
+                        <span class="material-symbols-outlined text-[12px]">schedule</span>
+                        {{ activity.dateTime | date:'EEE · HH:mm' }}
                       </div>
-                      <div class="pt-1 flex justify-between items-center">
-                        <span class="text-xs font-bold text-on-surface">{{ activity.participantCount }}/{{ activity.maxParticipants }}</span>
-                        <button class="bg-primary text-on-primary text-[10px] font-bold px-4 py-1.5 rounded-full uppercase tracking-widest">Join</button>
+                      <div class="flex justify-between items-center pt-1">
+                        <span class="text-[10px] font-bold text-on-surface-variant">
+                          {{ activity.participantCount }}/{{ activity.maxParticipants }}
+                        </span>
+                        <button
+                          (click)="joinActivity($event, activity)"
+                          class="bg-primary text-on-primary text-[9px] font-bold px-3 py-1 rounded-full uppercase tracking-widest">
+                          Join
+                        </button>
                       </div>
                     </div>
                   </div>
                 }
+
                 @if (filteredActivities().length === 0) {
-                  <div class="flex items-center gap-3 py-4 text-on-surface-variant">
-                    <span class="material-symbols-outlined">sports</span>
-                    <p class="text-sm">No activities</p>
+                  <div class="flex items-center gap-3 py-6 text-on-surface-variant w-full justify-center">
+                    <span class="material-symbols-outlined text-outline">sports</span>
+                    <p class="text-sm font-medium">No activities found</p>
                   </div>
                 }
               </div>
@@ -197,14 +330,15 @@ const FILTER_CHIPS = ['All', 'Tennis', 'Football', 'Padel', 'Running', 'Swimming
         </div>
 
         <!-- FAB: my location -->
-        <div class="absolute bottom-40 right-5 z-40 md:bottom-8 md:right-8">
-          <button
-            (click)="centerOnUser()"
-            class="w-14 h-14 rounded-full bg-on-surface text-surface-container-lowest shadow-xl flex items-center justify-center active:scale-90 transition-transform"
-          >
-            <span class="material-symbols-outlined text-2xl">my_location</span>
-          </button>
-        </div>
+        <button
+          (click)="centerOnUser()"
+          class="absolute bottom-44 right-4 z-40 md:bottom-6 md:right-[380px]
+                 w-12 h-12 rounded-xl bg-white shadow-lg border border-outline-variant/10
+                 flex items-center justify-center active:scale-90 transition-transform hover:bg-surface-container-low"
+        >
+          <span class="material-symbols-outlined text-primary text-xl">my_location</span>
+        </button>
+
       </div>
 
       <app-bottom-nav />
@@ -212,30 +346,82 @@ const FILTER_CHIPS = ['All', 'Tennis', 'Football', 'Padel', 'Running', 'Swimming
   `,
   styles: [`
     :host ::ng-deep .leaflet-tile-pane {
-      filter: grayscale(0.8) brightness(1.1) opacity(0.75);
+      filter: grayscale(0.45) brightness(1.08) opacity(0.82);
     }
     :host ::ng-deep .leaflet-control-attribution {
-      font-size: 10px;
-      opacity: 0.5;
+      font-size: 9px;
+      opacity: 0.4;
+      background: transparent !important;
+    }
+    :host ::ng-deep .leaflet-control-zoom {
+      border: none !important;
+      border-radius: 12px !important;
+      overflow: hidden;
+      box-shadow: 0 2px 12px rgba(14,29,74,0.15) !important;
+    }
+    :host ::ng-deep .leaflet-control-zoom a {
+      border: none !important;
+      color: #1a6ef5 !important;
+      font-weight: 700 !important;
+    }
+    :host ::ng-deep .leaflet-control-zoom a:hover {
+      background-color: #eaf1ff !important;
     }
   `],
 })
 export class HomeComponent implements OnInit, OnDestroy {
   private locationsService = inject(LocationsService);
   private activitiesService = inject(ActivitiesService);
+  private toast = inject(ToastService);
   private router = inject(Router);
-  private cdr = inject(ChangeDetectorRef);
+  private destroyRef = inject(DestroyRef);
 
   protected FILTER_CHIPS = FILTER_CHIPS;
+  searchQuery  = signal('');
   activeFilter = signal('All');
-  activities = signal<Activity[]>([]);
-  locations = signal<Location[]>([]);
+  activities   = signal<Activity[]>([]);
+  locations    = signal<Location[]>([]);
+
   private map: L.Map | null = null;
+  private markers: L.Marker[] = [];
+
+  filteredLocations = computed(() => {
+    const f = this.activeFilter();
+    const q = this.searchQuery().toLowerCase().trim();
+    let locs = this.locations();
+
+    if (f !== 'All') {
+      locs = locs.filter(l =>
+        l.sports?.split(',').some(s => s.trim().toLowerCase() === f.toLowerCase())
+      );
+    }
+    if (q) {
+      locs = locs.filter(l =>
+        l.name.toLowerCase().includes(q) ||
+        (l.address?.toLowerCase().includes(q) ?? false) ||
+        (l.sports?.toLowerCase().includes(q) ?? false)
+      );
+    }
+    return locs;
+  });
 
   filteredActivities = computed(() => {
     const f = this.activeFilter();
-    const all = this.activities();
-    return f === 'All' ? all : all.filter(a => a.sport === f);
+    const q = this.searchQuery().toLowerCase().trim();
+    let all = this.activities();
+
+    if (f !== 'All') {
+      all = all.filter(a => a.sport.toLowerCase() === f.toLowerCase());
+    }
+    if (q) {
+      all = all.filter(a =>
+        a.title.toLowerCase().includes(q) ||
+        a.sport.toLowerCase().includes(q) ||
+        (a.location?.name?.toLowerCase().includes(q) ?? false) ||
+        (a.location?.address?.toLowerCase().includes(q) ?? false)
+      );
+    }
+    return all;
   });
 
   mapOptions: L.MapOptions = {
@@ -250,103 +436,113 @@ export class HomeComponent implements OnInit, OnDestroy {
     zoomControl: false,
   };
 
+  constructor() {
+    effect(() => {
+      this.refreshMarkers(this.filteredLocations());
+    });
+  }
+
   ngOnInit(): void {
     this.loadActivities();
     this.loadLocations();
   }
 
   ngOnDestroy(): void {
-    this.map?.remove();
+    this.map = null;
   }
 
   onMapReady(map: L.Map): void {
     this.map = map;
     L.control.zoom({ position: 'bottomright' }).addTo(map);
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        pos => {
-          const { latitude, longitude } = pos.coords;
-          map.setView([latitude, longitude], 14);
-          this.locationsService.getNearby(latitude, longitude, 10).subscribe({
-            next: locs => {
-              this.locations.set(locs);
-              this.addLocationMarkers(locs);
-              this.cdr.markForCheck();
-            },
-          });
-        },
-        () => this.loadLocations(),
-      );
-    }
+    // Draw whatever is already loaded
+    this.refreshMarkers(this.filteredLocations());
+    // Try to center on user
+    navigator.geolocation?.getCurrentPosition(
+      pos => {
+        if (!this.map) return;
+        const { latitude, longitude } = pos.coords;
+        this.map.setView([latitude, longitude], 14);
+        this.locationsService.getNearby(latitude, longitude, 10)
+          .pipe(takeUntilDestroyed(this.destroyRef), catchError(() => EMPTY))
+          .subscribe(locs => this.locations.set(locs));
+      },
+      () => { /* fallback: loadLocations already called in ngOnInit */ },
+    );
   }
 
   private loadActivities(): void {
-    this.activitiesService.getAll().subscribe({
-      next: acts => { this.activities.set(acts); this.cdr.markForCheck(); },
-    });
+    this.activitiesService.getAll().pipe(
+      takeUntilDestroyed(this.destroyRef),
+      catchError(() => {
+        this.toast.error('Could not load activities. Please refresh.', 'Network error');
+        return EMPTY;
+      }),
+    ).subscribe(paged => this.activities.set(paged.items));
   }
 
   private loadLocations(): void {
-    this.locationsService.getAll(1, 50).subscribe({
-      next: paged => {
-        const locs = paged.items;
-        this.locations.set(locs);
-        this.addLocationMarkers(locs);
-        this.cdr.markForCheck();
-      },
-    });
+    this.locationsService.getAll(1, 100).pipe(
+      takeUntilDestroyed(this.destroyRef),
+      catchError(() => {
+        this.toast.error('Could not load venues. Please refresh.', 'Network error');
+        return EMPTY;
+      }),
+    ).subscribe(paged => this.locations.set(paged.items));
   }
 
-  private addLocationMarkers(locations: Location[]): void {
+  private refreshMarkers(locations: Location[]): void {
+    this.markers.forEach(m => m.remove());
+    this.markers = [];
     if (!this.map) return;
+
     locations.forEach(loc => {
-      const sport = loc.sports?.split(',')[0]?.trim() ?? 'default';
-      const color = SPORT_COLORS[sport] ?? SPORT_COLORS['default'];
-      const icon = SPORT_ICONS[sport] ?? SPORT_ICONS['default'];
+      const sportRaw = loc.sports?.split(',')[0] ?? '';
+      const sport    = resolveSport(sportRaw);
+      const color    = SPORT_COLORS[sport];
+      const icon     = SPORT_ICONS[sport];
+
       const marker = L.marker([loc.latitude, loc.longitude], {
         icon: L.divIcon({
           className: '',
-          html: `
-            <div style="display:flex;flex-direction:column;align-items:center;cursor:pointer;">
-              <div style="background:${color};color:#2b3437;padding:10px;border-radius:50%;
-                          box-shadow:0 4px 12px rgba(0,0,0,0.2);border:2px solid white;">
-                <span class="material-symbols-outlined" style="font-size:18px;line-height:1;">${icon}</span>
-              </div>
-              <div style="margin-top:4px;background:white;padding:2px 8px;border-radius:999px;
-                          box-shadow:0 1px 4px rgba(0,0,0,0.1);font-size:10px;font-weight:700;
-                          font-family:Inter,sans-serif;white-space:nowrap;">
-                ${loc.name.slice(0, 14)}
-              </div>
-            </div>`,
-          iconSize: [0, 0],
-          iconAnchor: [20, 20],
+          html: markerHtml(color, icon, loc.name),
+          iconSize:   [40, 52],
+          iconAnchor: [20, 52],
         }),
       });
       marker.on('click', () => this.router.navigate(['/locations', loc.id]));
       marker.addTo(this.map!);
+      this.markers.push(marker);
     });
-  }
-
-  centerOnUser(): void {
-    if (!this.map) return;
-    navigator.geolocation?.getCurrentPosition(
-      pos => this.map?.setView([pos.coords.latitude, pos.coords.longitude], 15),
-    );
   }
 
   setFilter(chip: string): void {
     this.activeFilter.set(chip);
   }
 
-  sportColor(sport: string): string {
-    return SPORT_COLORS[sport] ?? SPORT_COLORS['default'];
+  centerOnUser(): void {
+    if (!this.map) return;
+    navigator.geolocation?.getCurrentPosition(
+      pos => this.map?.setView([pos.coords.latitude, pos.coords.longitude], 15),
+      () => this.toast.warning('Enable location access to use this feature.', 'Location denied'),
+    );
   }
 
-  sportIcon(sport: string): string {
-    return SPORT_ICONS[sport] ?? SPORT_ICONS['default'];
+  joinActivity(event: Event, activity: Activity): void {
+    event.stopPropagation();
+    this.toast.info(`Join feature coming soon for "${activity.title}"`, 'Coming soon');
   }
 
   goToActivity(id: number): void {
     this.router.navigate(['/activities', id]);
+  }
+
+  sportColor(sport: string): string {
+    const key = SPORT_KEYS.find(k => k.toLowerCase() === sport.toLowerCase()) ?? 'default';
+    return SPORT_COLORS[key];
+  }
+
+  sportIcon(sport: string): string {
+    const key = SPORT_KEYS.find(k => k.toLowerCase() === sport.toLowerCase()) ?? 'default';
+    return SPORT_ICONS[key];
   }
 }

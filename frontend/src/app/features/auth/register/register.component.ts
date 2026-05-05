@@ -4,8 +4,10 @@ import {
 import {
   FormControl, FormGroup, ReactiveFormsModule, Validators, AbstractControl, ValidationErrors,
 } from '@angular/forms';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { Router, RouterLink } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
+import { ToastService } from '../../../core/services/toast.service';
 
 function passwordMatch(control: AbstractControl): ValidationErrors | null {
   const pw = control.get('password')?.value;
@@ -54,70 +56,169 @@ interface SportChip {
           </div>
 
           <!-- Form -->
-          <form [formGroup]="form" (ngSubmit)="submit()" class="relative z-10 space-y-8">
+          <form [formGroup]="form" (ngSubmit)="submit()" class="relative z-10 space-y-6">
 
             <!-- Fields grid -->
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+
               <!-- Username -->
-              <div class="space-y-2">
+              <div class="space-y-1.5">
                 <label class="block text-[10px] font-bold uppercase tracking-widest text-outline ml-1">Username</label>
                 <div class="relative flex items-center">
-                  <span class="material-symbols-outlined absolute left-4 text-outline text-[20px]">person</span>
+                  <span class="material-symbols-outlined absolute left-4 text-[20px]"
+                    [class]="fieldIconColor('username')">person</span>
                   <input
                     type="text"
                     formControlName="username"
                     autocomplete="username"
                     placeholder="johndoe_92"
-                    class="w-full bg-surface-container-low border-none rounded-lg py-4 pl-12 pr-4 text-on-surface placeholder:text-outline-variant focus:bg-surface-container-lowest focus:outline-none focus:ring-0 transition-all"
+                    [class]="fieldClass('username')"
+                    class="w-full bg-surface-container-low border rounded-lg py-4 pl-12 pr-4 text-on-surface placeholder:text-outline-variant focus:bg-surface-container-lowest focus:outline-none focus:ring-2 transition-all"
                   />
                 </div>
+                @if (showError('username', 'required')) {
+                  <p class="text-error text-xs ml-1 flex items-center gap-1">
+                    <span class="material-symbols-outlined text-[14px]">error</span>
+                    Username is required.
+                  </p>
+                }
+                @if (showError('username', 'minlength')) {
+                  <p class="text-error text-xs ml-1 flex items-center gap-1">
+                    <span class="material-symbols-outlined text-[14px]">error</span>
+                    Must be at least 3 characters.
+                  </p>
+                }
               </div>
 
               <!-- Email -->
-              <div class="space-y-2">
+              <div class="space-y-1.5">
                 <label class="block text-[10px] font-bold uppercase tracking-widest text-outline ml-1">Email address</label>
                 <div class="relative flex items-center">
-                  <span class="material-symbols-outlined absolute left-4 text-outline text-[20px]">mail</span>
+                  <span class="material-symbols-outlined absolute left-4 text-[20px]"
+                    [class]="fieldIconColor('email')">mail</span>
                   <input
                     type="email"
                     formControlName="email"
                     autocomplete="email"
                     placeholder="hello@activezone.com"
-                    class="w-full bg-surface-container-low border-none rounded-lg py-4 pl-12 pr-4 text-on-surface placeholder:text-outline-variant focus:bg-surface-container-lowest focus:outline-none focus:ring-0 transition-all"
+                    [class]="fieldClass('email')"
+                    class="w-full bg-surface-container-low border rounded-lg py-4 pl-12 pr-4 text-on-surface placeholder:text-outline-variant focus:bg-surface-container-lowest focus:outline-none focus:ring-2 transition-all"
                   />
                 </div>
+                @if (showError('email', 'required')) {
+                  <p class="text-error text-xs ml-1 flex items-center gap-1">
+                    <span class="material-symbols-outlined text-[14px]">error</span>
+                    Email is required.
+                  </p>
+                }
+                @if (showError('email', 'email')) {
+                  <p class="text-error text-xs ml-1 flex items-center gap-1">
+                    <span class="material-symbols-outlined text-[14px]">error</span>
+                    Enter a valid email address.
+                  </p>
+                }
               </div>
 
               <!-- Password -->
-              <div class="space-y-2">
+              <div class="space-y-1.5">
                 <label class="block text-[10px] font-bold uppercase tracking-widest text-outline ml-1">Password</label>
                 <div class="relative flex items-center">
-                  <span class="material-symbols-outlined absolute left-4 text-outline text-[20px]">lock</span>
+                  <span class="material-symbols-outlined absolute left-4 text-[20px]"
+                    [class]="fieldIconColor('password')">lock</span>
                   <input
-                    type="password"
+                    [type]="showPassword() ? 'text' : 'password'"
                     formControlName="password"
                     autocomplete="new-password"
                     placeholder="••••••••"
-                    class="w-full bg-surface-container-low border-none rounded-lg py-4 pl-12 pr-4 text-on-surface placeholder:text-outline-variant focus:bg-surface-container-lowest focus:outline-none focus:ring-0 transition-all"
+                    [class]="fieldClass('password')"
+                    class="w-full bg-surface-container-low border rounded-lg py-4 pl-12 pr-12 text-on-surface placeholder:text-outline-variant focus:bg-surface-container-lowest focus:outline-none focus:ring-2 transition-all"
                   />
+                  <button type="button" (click)="showPassword.set(!showPassword())"
+                    class="absolute right-3 p-1.5 text-outline hover:text-on-surface transition-colors"
+                    [attr.aria-label]="showPassword() ? 'Hide password' : 'Show password'">
+                    <span class="material-symbols-outlined text-[20px]">{{ showPassword() ? 'visibility_off' : 'visibility' }}</span>
+                  </button>
                 </div>
+
+                <!-- Password requirements (shown when field is dirty) -->
+                @if (form.get('password')?.dirty) {
+                  <div class="mt-2 space-y-1 px-1">
+                    <p class="text-[10px] font-bold uppercase tracking-widest text-outline-variant mb-1.5">Requirements</p>
+                    <div class="flex items-center gap-2" [class.text-secondary]="req().length" [class.text-outline-variant]="!req().length">
+                      <span class="material-symbols-outlined text-[16px]"
+                        style="font-variation-settings:'FILL' 1,'wght' 500,'GRAD' 0,'opsz' 20">
+                        {{ req().length ? 'check_circle' : 'radio_button_unchecked' }}
+                      </span>
+                      <span class="text-xs font-medium">At least 8 characters</span>
+                    </div>
+                    <div class="flex items-center gap-2" [class.text-secondary]="req().upper" [class.text-outline-variant]="!req().upper">
+                      <span class="material-symbols-outlined text-[16px]"
+                        style="font-variation-settings:'FILL' 1,'wght' 500,'GRAD' 0,'opsz' 20">
+                        {{ req().upper ? 'check_circle' : 'radio_button_unchecked' }}
+                      </span>
+                      <span class="text-xs font-medium">One uppercase letter</span>
+                    </div>
+                    <div class="flex items-center gap-2" [class.text-secondary]="req().digit" [class.text-outline-variant]="!req().digit">
+                      <span class="material-symbols-outlined text-[16px]"
+                        style="font-variation-settings:'FILL' 1,'wght' 500,'GRAD' 0,'opsz' 20">
+                        {{ req().digit ? 'check_circle' : 'radio_button_unchecked' }}
+                      </span>
+                      <span class="text-xs font-medium">One number</span>
+                    </div>
+                  </div>
+                }
+
+                @if (showError('password', 'required')) {
+                  <p class="text-error text-xs ml-1 flex items-center gap-1">
+                    <span class="material-symbols-outlined text-[14px]">error</span>
+                    Password is required.
+                  </p>
+                }
+                @if (showError('password', 'minlength')) {
+                  <p class="text-error text-xs ml-1 flex items-center gap-1">
+                    <span class="material-symbols-outlined text-[14px]">error</span>
+                    Password must be at least 8 characters.
+                  </p>
+                }
               </div>
 
               <!-- Confirm password -->
-              <div class="space-y-2">
+              <div class="space-y-1.5">
                 <label class="block text-[10px] font-bold uppercase tracking-widest text-outline ml-1">Confirm password</label>
                 <div class="relative flex items-center">
-                  <span class="material-symbols-outlined absolute left-4 text-outline text-[20px]">shield</span>
+                  <span class="material-symbols-outlined absolute left-4 text-[20px]"
+                    [class]="confirmIconColor()">shield</span>
                   <input
-                    type="password"
+                    [type]="showPassword() ? 'text' : 'password'"
                     formControlName="confirmPassword"
                     autocomplete="new-password"
                     placeholder="••••••••"
-                    class="w-full bg-surface-container-low border-none rounded-lg py-4 pl-12 pr-4 text-on-surface placeholder:text-outline-variant focus:bg-surface-container-lowest focus:outline-none focus:ring-0 transition-all"
+                    [class]="fieldClass('confirmPassword')"
+                    class="w-full bg-surface-container-low border rounded-lg py-4 pl-12 pr-12 text-on-surface placeholder:text-outline-variant focus:bg-surface-container-lowest focus:outline-none focus:ring-2 transition-all"
                   />
+                  <button type="button" (click)="showPassword.set(!showPassword())"
+                    class="absolute right-3 p-1.5 text-outline hover:text-on-surface transition-colors"
+                    [attr.aria-label]="showPassword() ? 'Hide password' : 'Show password'">
+                    <span class="material-symbols-outlined text-[20px]">{{ showPassword() ? 'visibility_off' : 'visibility' }}</span>
+                  </button>
                 </div>
-                @if (form.hasError('passwordMismatch') && form.get('confirmPassword')?.dirty) {
-                  <p class="text-error text-xs ml-1 mt-1">Passwords do not match.</p>
+                @if (showError('confirmPassword', 'required')) {
+                  <p class="text-error text-xs ml-1 flex items-center gap-1">
+                    <span class="material-symbols-outlined text-[14px]">error</span>
+                    Please confirm your password.
+                  </p>
+                }
+                @if (form.hasError('passwordMismatch') && form.get('confirmPassword')?.dirty && form.get('confirmPassword')?.value) {
+                  <p class="text-error text-xs ml-1 flex items-center gap-1">
+                    <span class="material-symbols-outlined text-[14px]">error</span>
+                    Passwords do not match.
+                  </p>
+                }
+                @if (passwordsMatch()) {
+                  <p class="text-secondary text-xs ml-1 flex items-center gap-1">
+                    <span class="material-symbols-outlined text-[14px]" style="font-variation-settings:'FILL' 1,'wght' 500,'GRAD' 0,'opsz' 20">check_circle</span>
+                    Passwords match.
+                  </p>
                 }
               </div>
             </div>
@@ -159,13 +260,6 @@ interface SportChip {
                 }
               </div>
             </div>
-
-            @if (error()) {
-              <p class="text-error text-sm text-center">{{ error() }}</p>
-            }
-            @if (success()) {
-              <p class="text-secondary text-sm text-center font-medium">{{ success() }}</p>
-            }
 
             <!-- Submit -->
             <div class="pt-2">
@@ -216,6 +310,7 @@ interface SportChip {
 export class RegisterComponent {
   private auth = inject(AuthService);
   private router = inject(Router);
+  private toast = inject(ToastService);
 
   form = new FormGroup({
     username: new FormControl('', [Validators.required, Validators.minLength(3)]),
@@ -225,26 +320,69 @@ export class RegisterComponent {
   }, { validators: passwordMatch });
 
   loading = signal(false);
-  error = signal('');
-  success = signal('');
-
+  showPassword = signal(false);
   selectedSports = signal<string[]>([]);
 
+  private passwordValue = toSignal(this.form.get('password')!.valueChanges, { initialValue: '' });
+
+  req = computed(() => {
+    const pw = this.passwordValue() ?? '';
+    return {
+      length: pw.length >= 8,
+      upper: /[A-Z]/.test(pw),
+      digit: /[0-9]/.test(pw),
+    };
+  });
+
+  passwordsMatch = computed(() => {
+    const confirm = this.form.get('confirmPassword');
+    return (
+      confirm?.dirty === true &&
+      (confirm?.value ?? '').length > 0 &&
+      !this.form.hasError('passwordMismatch')
+    );
+  });
+
   sports: SportChip[] = [
-    { label: 'Football', color: '#4CAF50', icon: 'sports_soccer' },
+    { label: 'Football',   color: '#4CAF50', icon: 'sports_soccer' },
     { label: 'Basketball', color: '#FF9800', icon: 'sports_basketball' },
-    { label: 'Tennis', color: '#CDDC39', icon: 'sports_tennis' },
-    { label: 'Padel', color: '#2196F3', icon: 'sports_tennis' },
+    { label: 'Tennis',     color: '#CDDC39', icon: 'sports_tennis' },
+    { label: 'Padel',      color: '#2196F3', icon: 'sports_tennis' },
     { label: 'Volleyball', color: '#FFEB3B', icon: 'sports_volleyball' },
-    { label: 'Badminton', color: '#F44336', icon: 'sports_baseball' },
-    { label: 'Swimming', color: '#00BCD4', icon: 'pool' },
-    { label: 'Cycling', color: '#E91E63', icon: 'directions_bike' },
-    { label: 'Running', color: '#FF7043', icon: 'directions_run' },
+    { label: 'Badminton',  color: '#F44336', icon: 'sports_baseball' },
+    { label: 'Swimming',   color: '#00BCD4', icon: 'pool' },
+    { label: 'Cycling',    color: '#E91E63', icon: 'directions_bike' },
+    { label: 'Running',    color: '#FF7043', icon: 'directions_run' },
   ];
 
+  showError(field: string, error: string): boolean {
+    const ctrl = this.form.get(field);
+    return !!(ctrl?.touched && ctrl?.hasError(error));
+  }
+
+  fieldClass(field: string): string {
+    const ctrl = this.form.get(field);
+    if (!ctrl?.touched) return 'border-transparent focus:ring-primary/20';
+    if (ctrl.invalid)   return 'border-error/40 focus:ring-error/20';
+    return 'border-secondary/30 focus:ring-secondary/20';
+  }
+
+  fieldIconColor(field: string): string {
+    const ctrl = this.form.get(field);
+    if (!ctrl?.touched) return 'text-outline';
+    if (ctrl.invalid)   return 'text-error';
+    return 'text-secondary';
+  }
+
+  confirmIconColor(): string {
+    const ctrl = this.form.get('confirmPassword');
+    if (!ctrl?.dirty || !ctrl?.value) return 'text-outline';
+    if (this.form.hasError('passwordMismatch') || ctrl.hasError('required')) return 'text-error';
+    return 'text-secondary';
+  }
+
   sportChipClass(sport: SportChip): string {
-    const isSelected = this.selectedSports().includes(sport.label);
-    return isSelected
+    return this.selectedSports().includes(sport.label)
       ? 'bg-primary text-on-primary'
       : 'bg-surface-container-highest text-on-surface hover:bg-surface-container-high';
   }
@@ -257,21 +395,36 @@ export class RegisterComponent {
   }
 
   submit(): void {
-    if (this.form.invalid) return;
+    if (this.form.invalid) {
+      this.form.markAllAsTouched();
+      return;
+    }
     this.loading.set(true);
-    this.error.set('');
-    this.success.set('');
     const { username, email, password } = this.form.getRawValue();
     this.auth
       .register({ username: username!, email: email!, password: password! })
       .subscribe({
         next: res => {
-          this.success.set(res.message ?? 'Account created! Please check your email.');
+          this.toast.success(
+            res.message ?? 'Check your inbox to confirm your email address.',
+            'Account created!',
+          );
           this.loading.set(false);
-          setTimeout(() => this.router.navigate(['/login']), 2000);
+          setTimeout(() => this.router.navigate(['/login']), 2500);
         },
-        error: () => {
-          this.error.set('Registration failed. Please try again.');
+        error: (err) => {
+          const msg: string = err?.error?.message ?? '';
+          if (err?.status === 409) {
+            if (msg.toLowerCase().includes('email')) {
+              this.toast.error('An account with this email already exists.', 'Email taken');
+            } else if (msg.toLowerCase().includes('username')) {
+              this.toast.error('This username is already taken. Try another.', 'Username taken');
+            } else {
+              this.toast.error('An account with these details already exists.', 'Registration failed');
+            }
+          } else {
+            this.toast.error('Registration failed. Please try again.', 'Something went wrong');
+          }
           this.loading.set(false);
         },
       });

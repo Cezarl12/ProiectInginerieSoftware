@@ -3,8 +3,9 @@
   "version": "0.0.0",
   "scripts": {
     "ng": "ng",
-    "start": "ng serve",
-    "build": "ng build",
+    "build:css": "postcss src/styles.css -o src/styles.out.css",
+    "start": "npm run build:css && concurrently \"postcss src/styles.css --watch -o src/styles.out.css\" \"ng serve\"",
+    "build": "npm run build:css && ng build",
     "watch": "ng build --watch --configuration development",
     "test": "ng test"
   },
@@ -29,7 +30,9 @@
     "@tailwindcss/forms": "^0.5.11",
     "@tailwindcss/postcss": "^4.2.4",
     "@types/leaflet": "^1.9.21",
+    "concurrently": "^9.2.1",
     "jsdom": "^28.0.0",
+    "postcss-cli": "^11.0.1",
     "prettier": "^3.8.1",
     "tailwindcss": "^4.2.4",
     "typescript": "~5.9.2",
