@@ -154,6 +154,7 @@ using (var scope = app.Services.CreateScope())
     var hasher = scope.ServiceProvider.GetRequiredService<IPasswordHasher>();
     await context.Database.MigrateAsync();
     await DbSeeder.SeedAdminAsync(context, hasher);
+    await DbSeeder.SeedLocationsAsync(context);
 }
 
 // ---------- Pipeline ----------

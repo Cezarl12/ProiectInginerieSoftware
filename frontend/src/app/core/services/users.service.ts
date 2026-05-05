@@ -16,7 +16,7 @@ export class UsersService {
     return this.http.get<User>(`${this.base}/${id}`);
   }
 
-  update(id: number, dto: UpdateUserDto) {
-    return this.http.put<User>(`${this.base}/${id}`, dto);
+  update(dto: UpdateUserDto) {
+    return this.http.put<User>(`${this.base}/me`, dto);
   }
 }

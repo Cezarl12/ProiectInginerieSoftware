@@ -4,46 +4,46 @@
 @import "tailwindcss";
 @plugin "@tailwindcss/forms";
 
-/* ── SportMap blue palette ── */
+/* ── SportMap teal-blue palette ── */
 @theme {
-  /* Surfaces — light sky tint */
-  --color-background: #f0f7ff;
-  --color-surface: #f0f7ff;
-  --color-surface-bright: #f8fbff;
-  --color-surface-dim: #b8ccf4;
+  /* Surfaces — light teal-grey */
+  --color-background: #edf7f9;
+  --color-surface: #edf7f9;
+  --color-surface-bright: #f5fbfc;
+  --color-surface-dim: #b4d8e4;
   --color-surface-container-lowest: #ffffff;
-  --color-surface-container-low: #eaf1ff;
-  --color-surface-container: #dde8ff;
-  --color-surface-container-high: #d0deff;
-  --color-surface-container-highest: #c3d3ff;
-  --color-surface-variant: #cde0ff;
+  --color-surface-container-low: #e0f0f5;
+  --color-surface-container: #cfe6ee;
+  --color-surface-container-high: #bddce7;
+  --color-surface-container-highest: #aad2e0;
+  --color-surface-variant: #c2dde8;
 
-  /* Text — navy-tinted dark */
-  --color-on-surface: #0e1d4a;
-  --color-on-surface-variant: #3d4f7a;
-  --color-on-background: #0e1d4a;
+  /* Text — deep teal-dark */
+  --color-on-surface: #08272f;
+  --color-on-surface-variant: #2a5060;
+  --color-on-background: #08272f;
 
-  /* Primary — sky blue */
-  --color-primary: #1a6ef5;
-  --color-primary-dim: #1259d5;
-  --color-primary-container: #d0e4ff;
+  /* Primary — medium teal-blue */
+  --color-primary: #2e8fa6;
+  --color-primary-dim: #22778d;
+  --color-primary-container: #beeaf4;
   --color-on-primary: #ffffff;
-  --color-on-primary-fixed: #00297a;
-  --color-inverse-primary: #9ec5ff;
+  --color-on-primary-fixed: #002a35;
+  --color-inverse-primary: #80d8ec;
 
   /* Sport accents */
-  --color-sport-tennis: #FFEB3B;
-  --color-sport-padel: #00897B;
+  --color-sport-tennis: #F9A825;
+  --color-sport-padel: #26A69A;
   --color-sport-football: #43A047;
   --color-sport-running: #FF7043;
   --color-sport-basketball: #FF9800;
-  --color-sport-swimming: #00BCD4;
+  --color-sport-swimming: #00ACC1;
   --color-sport-yoga: #9C27B0;
 
-  /* Tertiary — link / accent blue */
-  --color-tertiary: #0052cc;
-  --color-tertiary-fixed: #4e8cf8;
-  --color-tertiary-fixed-dim: #1a6ef5;
+  /* Tertiary — deeper teal for links */
+  --color-tertiary: #005c78;
+  --color-tertiary-fixed: #3292aa;
+  --color-tertiary-fixed-dim: #2e8fa6;
 
   /* Secondary — success green */
   --color-secondary: #006f1d;
@@ -56,22 +56,22 @@
   --color-on-secondary-container: #006017;
 
   /* Primary extended */
-  --color-primary-fixed: #d0e4ff;
-  --color-primary-fixed-dim: #b8d2ff;
-  --color-on-primary-container: #1259d5;
-  --color-on-primary-fixed-variant: #1a6ef5;
-  --color-surface-tint: #1a6ef5;
+  --color-primary-fixed: #beeaf4;
+  --color-primary-fixed-dim: #9fdded;
+  --color-on-primary-container: #22778d;
+  --color-on-primary-fixed-variant: #2e8fa6;
+  --color-surface-tint: #2e8fa6;
 
   /* Tertiary extended */
-  --color-tertiary-container: #4e8cf8;
-  --color-tertiary-dim: #003fa0;
+  --color-tertiary-container: #3292aa;
+  --color-tertiary-dim: #004460;
   --color-on-tertiary: #ffffff;
   --color-on-tertiary-fixed: #000000;
-  --color-on-tertiary-fixed-variant: #001f6e;
+  --color-on-tertiary-fixed-variant: #002840;
 
   /* Inverse */
-  --color-inverse-surface: #0a1535;
-  --color-inverse-on-surface: #8aaedf;
+  --color-inverse-surface: #082530;
+  --color-inverse-on-surface: #7ac8da;
 
   /* Error */
   --color-error: #9f403d;
@@ -81,8 +81,8 @@
   --color-on-error-container: #752121;
 
   /* Outline */
-  --color-outline: #5168a0;
-  --color-outline-variant: #8fadd8;
+  --color-outline: #3a7088;
+  --color-outline-variant: #7bbcd0;
 
   /* Typography */
   --font-sans: 'Inter', system-ui, sans-serif;
@@ -92,8 +92,8 @@
   --radius-xl: 3rem;
 
   /* Shadows */
-  --shadow-ambient: 0 0 60px 0 rgba(26, 110, 245, 0.06);
-  --shadow-lift: 0 4px 40px 0 rgba(26, 110, 245, 0.08);
+  --shadow-ambient: 0 0 60px 0 rgba(46, 143, 166, 0.06);
+  --shadow-lift: 0 4px 40px 0 rgba(46, 143, 166, 0.08);
 }
 
 @layer base {

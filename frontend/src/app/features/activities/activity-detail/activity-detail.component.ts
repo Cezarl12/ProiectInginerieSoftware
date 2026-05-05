@@ -15,15 +15,23 @@ import { ActivityType } from '../../../core/models/activity.model';
 import type { Activity } from '../../../core/models/activity.model';
 
 const SPORT_COLORS: Record<string, string> = {
-  Tennis: '#FFEB3B', Football: '#43A047', Basketball: '#FF9800',
-  Padel: '#00897B', Running: '#FF7043', Swimming: '#00BCD4',
-  Yoga: '#9C27B0', Cycling: '#E91E63', default: '#1a6ef5',
+  Football: '#43A047', Tennis: '#F9A825', Basketball: '#FF9800',
+  Running: '#FF7043', Swimming: '#00ACC1', Padel: '#26A69A',
+  Cycling: '#E91E63', Yoga: '#9C27B0', Volleyball: '#1565C0',
+  Handball: '#00838F', Golf: '#558B2F', Boxing: '#C62828',
+  Fitness: '#5C6BC0', Badminton: '#F57F17', Rugby: '#795548',
+  'Martial Arts': '#D32F2F', Skiing: '#0D47A1', Surfing: '#0277BD',
+  Cricket: '#6D4C41', Athletics: '#FF8F00', default: '#2e8fa6',
 };
 
 const SPORT_ICONS: Record<string, string> = {
-  Tennis: 'sports_tennis', Football: 'sports_soccer', Basketball: 'sports_basketball',
-  Padel: 'sports_tennis', Running: 'directions_run', Swimming: 'pool',
-  Yoga: 'self_improvement', Cycling: 'directions_bike', default: 'sports',
+  Football: 'sports_soccer', Tennis: 'sports_tennis', Basketball: 'sports_basketball',
+  Running: 'directions_run', Swimming: 'pool', Padel: 'sports_tennis',
+  Cycling: 'directions_bike', Yoga: 'self_improvement', Volleyball: 'sports_volleyball',
+  Handball: 'sports_handball', Golf: 'sports_golf', Boxing: 'sports_mma',
+  Fitness: 'fitness_center', Badminton: 'sports_tennis', Rugby: 'sports_rugby',
+  'Martial Arts': 'sports_martial_arts', Skiing: 'skiing', Surfing: 'surfing',
+  Cricket: 'sports_cricket', Athletics: 'directions_run', default: 'sports',
 };
 
 function resolveSport<T>(map: Record<string, T>, raw: string): T {

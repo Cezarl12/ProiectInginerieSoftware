@@ -66,10 +66,39 @@ function sportMeta(label: string) {
                   <span class="material-symbols-outlined text-5xl text-on-primary-container">person</span>
                 }
               </div>
-              <div class="absolute -bottom-1 -right-1 w-8 h-8 rounded-full bg-primary flex items-center justify-center shadow-sm">
+              <button (click)="startEditPhoto()"
+                      class="absolute -bottom-1 -right-1 w-8 h-8 rounded-full bg-primary flex items-center justify-center shadow-sm active:scale-95 transition-transform">
                 <span class="material-symbols-outlined text-on-primary text-[16px]">edit</span>
-              </div>
+              </button>
             </div>
+
+            @if (editingPhoto()) {
+              <div class="w-full max-w-xs space-y-2">
+                <p class="text-xs font-bold text-on-surface-variant text-center uppercase tracking-widest">Photo URL</p>
+                <input [(ngModel)]="pendingPhotoUrl"
+                       type="url"
+                       placeholder="https://example.com/photo.jpg"
+                       class="w-full bg-surface-container-low rounded-xl px-4 py-2.5 text-sm text-on-surface border-none outline-none focus:ring-2 focus:ring-primary/30 transition-all"
+                       (keyup.enter)="savePhoto()" />
+                <div class="flex gap-2">
+                  <button (click)="savePhoto()"
+                          [disabled]="savingPhoto()"
+                          class="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-full bg-primary text-on-primary text-sm font-bold active:scale-95 transition-all disabled:opacity-60">
+                    @if (savingPhoto()) {
+                      <span class="material-symbols-outlined text-[16px] animate-spin">progress_activity</span>
+                    } @else {
+                      <span class="material-symbols-outlined text-[16px]">check</span>
+                    }
+                    Save
+                  </button>
+                  <button (click)="cancelEditPhoto()"
+                          class="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-full bg-surface-container-high text-on-surface text-sm font-semibold active:scale-95 transition-all">
+                    <span class="material-symbols-outlined text-[16px]">close</span>
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            }
 
             @if (editingName()) {
               <div class="flex items-center gap-2 w-full max-w-xs">
@@ -238,6 +267,9 @@ export class ProfileComponent {
   savingSports = signal(false);
   editingName = signal(false);
   pendingUsername = '';
+  editingPhoto = signal(false);
+  savingPhoto = signal(false);
+  pendingPhotoUrl = '';
 
   sportsChanged = computed(() =>
     JSON.stringify([...this.pendingSports()].sort()) !==
@@ -271,7 +303,7 @@ export class ProfileComponent {
     if (!u) return;
     this.savingSports.set(true);
     const favoriteSports = this.pendingSports().join(', ');
-    this.usersService.update(u.id, { favoriteSports }).pipe(
+    this.usersService.update({ favoriteSports }).pipe(
       takeUntilDestroyed(this.destroyRef),
       catchError(() => {
         this.toast.error('Could not save sports. Try again.');
@@ -299,7 +331,7 @@ export class ProfileComponent {
     const u = this.user();
     const name = this.pendingUsername.trim();
     if (!u || !name || name === u.username) { this.editingName.set(false); return; }
-    this.usersService.update(u.id, { username: name }).pipe(
+    this.usersService.update({ username: name }).pipe(
       takeUntilDestroyed(this.destroyRef),
       catchError(() => {
         this.toast.error('Could not update username. Try again.');
@@ -309,6 +341,33 @@ export class ProfileComponent {
       this.user.set(updated);
       this.editingName.set(false);
       this.toast.success('Username updated!');
+    });
+  }
+
+  startEditPhoto(): void {
+    this.pendingPhotoUrl = this.user()?.profilePhotoUrl ?? '';
+    this.editingPhoto.set(true);
+  }
+
+  cancelEditPhoto(): void { this.editingPhoto.set(false); }
+
+  savePhoto(): void {
+    const u = this.user();
+    const url = this.pendingPhotoUrl.trim();
+    if (!u) { this.editingPhoto.set(false); return; }
+    this.savingPhoto.set(true);
+    this.usersService.update({ profilePhotoUrl: url || null }).pipe(
+      takeUntilDestroyed(this.destroyRef),
+      catchError(() => {
+        this.toast.error('Could not update photo. Try again.');
+        this.savingPhoto.set(false);
+        return EMPTY;
+      }),
+    ).subscribe(updated => {
+      this.user.set(updated);
+      this.editingPhoto.set(false);
+      this.savingPhoto.set(false);
+      this.toast.success('Profile photo updated!');
     });
   }
 
