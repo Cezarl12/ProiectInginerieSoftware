@@ -16,7 +16,7 @@ import { ToastService } from '../../core/services/toast.service';
 import type { Location } from '../../core/models/location.model';
 import type { Activity } from '../../core/models/activity.model';
 
-const BUCHAREST: L.LatLngExpression = [44.4268, 26.1025];
+const ORADEA: L.LatLngExpression = [47.0722, 21.9218];
 
 const SPORT_COLORS: Record<string, string> = {
   Football:      '#43A047',
@@ -456,7 +456,7 @@ export class HomeComponent implements OnInit, OnDestroy {
       }),
     ],
     zoom: 13,
-    center: L.latLng(BUCHAREST as [number, number]),
+    center: L.latLng(ORADEA as [number, number]),
     zoomControl: false,
   };
 

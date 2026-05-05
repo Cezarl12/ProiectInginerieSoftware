@@ -155,6 +155,7 @@ using (var scope = app.Services.CreateScope())
     await context.Database.MigrateAsync();
     await DbSeeder.SeedAdminAsync(context, hasher);
     await DbSeeder.SeedLocationsAsync(context);
+    await DbSeeder.SeedOradeaLocationsAsync(context);
 }
 
 // ---------- Pipeline ----------
