@@ -8,11 +8,11 @@ export class ParticipationsService {
   private base = `${environment.apiUrl}/activities`;
 
   join(activityId: number) {
-    return this.http.post<void>(`${this.base}/${activityId}/participate`, {});
+    return this.http.post<void>(`${this.base}/${activityId}/join`, {});
   }
 
   leave(activityId: number) {
-    return this.http.delete<void>(`${this.base}/${activityId}/participate`);
+    return this.http.delete<void>(`${this.base}/${activityId}/leave`);
   }
 
   approve(activityId: number, userId: number) {

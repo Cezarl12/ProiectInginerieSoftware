@@ -42,8 +42,7 @@ export class BottomNavComponent {
 
   navItems = [
     { path: '/home', icon: 'home', label: 'Home', matchPath: true },
-    { path: '/home', icon: 'search', label: 'Search', matchPath: false },
-    { path: '/activities/create', icon: 'fitness_center', label: 'Activities', matchPath: true },
+    { path: '/activities', icon: 'fitness_center', label: 'Activities', matchPath: true },
     { path: '/profile', icon: 'person', label: 'Profile', matchPath: true },
   ];
 

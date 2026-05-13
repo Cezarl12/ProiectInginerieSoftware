@@ -19,11 +19,13 @@ public class UsersController : ControllerBase
 {
     private readonly IUserService _userService;
     private readonly IActivityService _activityService;
+    private readonly IWebHostEnvironment _env;
 
-    public UsersController(IUserService userService, IActivityService activityService)
+    public UsersController(IUserService userService, IActivityService activityService, IWebHostEnvironment env)
     {
         _userService = userService;
         _activityService = activityService;
+        _env = env;
     }
 
     /// <summary>Listează toți utilizatorii înregistrați.</summary>
@@ -69,6 +71,48 @@ public class UsersController : ControllerBase
         var userId = GetCurrentUserId();
         var user = await _userService.GetByIdAsync(userId);
         return user is null ? NotFound() : Ok(user);
+    }
+
+    /// <summary>Încarcă o poză de profil pentru utilizatorul autentificat.</summary>
+    [HttpPost("me/photo")]
+    [Consumes("multipart/form-data")]
+    [SwaggerOperation(Summary = "Upload poză profil", Description = "Acceptă fișiere jpg/png/webp/gif ≤ 5 MB. **Necesită autentificare.**")]
+    [SwaggerResponse(200, "Poză încărcată", typeof(object))]
+    [SwaggerResponse(400, "Fișier lipsă sau tip invalid")]
+    [ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
+    public async Task<IActionResult> UploadPhoto([FromForm] IFormFile? file)
+    {
+        if (file is null || file.Length == 0)
+            return BadRequest(new { message = "No file uploaded." });
+
+        var allowedExts = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { ".jpg", ".jpeg", ".png", ".webp", ".gif" };
+        var ext = Path.GetExtension(file.FileName);
+        if (!allowedExts.Contains(ext))
+            return BadRequest(new { message = "Only image files (jpg, png, webp, gif) are allowed." });
+
+        if (file.Length > 5_242_880)
+            return BadRequest(new { message = "File size must not exceed 5 MB." });
+
+        var webRoot = string.IsNullOrEmpty(_env.WebRootPath)
+            ? Path.Combine(_env.ContentRootPath, "wwwroot")
+            : _env.WebRootPath;
+        var uploadsDir = Path.Combine(webRoot, "uploads", "avatars");
+        Directory.CreateDirectory(uploadsDir);
+
+        var userId = GetCurrentUserId();
+        foreach (var old in Directory.GetFiles(uploadsDir, $"{userId}_*"))
+        {
+            try { System.IO.File.Delete(old); } catch { /* swallow */ }
+        }
+
+        var filename = $"{userId}_{Guid.NewGuid():N}{ext.ToLowerInvariant()}";
+        var fullPath = Path.Combine(uploadsDir, filename);
+        await using (var stream = new FileStream(fullPath, FileMode.Create))
+            await file.CopyToAsync(stream);
+
+        var photoUrl = $"/uploads/avatars/{filename}";
+        var updated = await _userService.UpdateAsync(userId, new UpdateUserDto { ProfilePhotoUrl = photoUrl });
+        return Ok(new { url = photoUrl, user = updated });
     }
 
     /// <summary>Actualizează profilul utilizatorului autentificat.</summary>

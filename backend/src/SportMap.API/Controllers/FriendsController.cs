@@ -72,6 +72,26 @@ public class FriendsController : ControllerBase
         return NoContent();
     }
 
+    /// <summary>Verifică dacă utilizatorul curent urmărește un alt utilizator.</summary>
+    [HttpGet("{userId:int}/is-following")]
+    [SwaggerOperation(Summary = "Status urmărire", Description = "Returnează dacă utilizatorul curent urmărește utilizatorul specificat. **Necesită autentificare.**")]
+    [SwaggerResponse(200, "Status urmărire", typeof(object))]
+    [ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
+    public async Task<ActionResult<object>> IsFollowing(int userId)
+    {
+        var currentUserId = GetCurrentUserId();
+        var isFollowing = await _friendshipService.IsFollowingAsync(currentUserId, userId);
+        return Ok(new { isFollowing });
+    }
+
+    /// <summary>Returnează utilizatorii urmăriți de un utilizator specificat.</summary>
+    [HttpGet("/api/users/{userId:int}/following")]
+    [SwaggerOperation(Summary = "Following unui utilizator", Description = "Returnează lista utilizatorilor urmăriți de utilizatorul specificat. **Necesită autentificare.**")]
+    [SwaggerResponse(200, "Pagină following", typeof(PagedResult<UserDto>))]
+    [ProducesResponseType(typeof(PagedResult<UserDto>), StatusCodes.Status200OK)]
+    public async Task<ActionResult<PagedResult<UserDto>>> GetFollowing(int userId, [FromQuery] PaginationQuery pagination)
+        => Ok(await _friendshipService.GetUserFolloweesAsync(userId, pagination));
+
     /// <summary>Returnează urmăritorii unui utilizator.</summary>
     [HttpGet("/api/users/{userId:int}/followers")]
     [SwaggerOperation(

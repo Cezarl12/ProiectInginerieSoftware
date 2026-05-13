@@ -28,6 +28,9 @@ public class JwtTokenGenerator : IJwtTokenGenerator
         var claims = new[]
         {
             new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
+            // Also emit nameid so controllers using ClaimTypes.NameIdentifier work
+            // regardless of whether inbound claim mapping is on or off.
+            new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
             new Claim(JwtRegisteredClaimNames.Email, user.Email),
             new Claim("username", user.Username),
             new Claim(ClaimTypes.Role, user.Role.ToString()),
@@ -40,6 +43,7 @@ public class JwtTokenGenerator : IJwtTokenGenerator
             issuer: _settings.Issuer,
             audience: _settings.Audience,
             claims: claims,
+            notBefore: DateTime.UtcNow,
             expires: expiresAt,
             signingCredentials: credentials);
 

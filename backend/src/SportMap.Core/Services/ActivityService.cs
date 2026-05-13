@@ -15,25 +15,31 @@ public class ActivityService : IActivityService
     private readonly IActivityRepository _activityRepository;
     private readonly ILocationRepository _locationRepository;
     private readonly IFriendshipRepository _friendshipRepository;
+    private readonly IParticipationRepository _participationRepository;
 
     public ActivityService(
         IActivityRepository activityRepository,
         ILocationRepository locationRepository,
-        IFriendshipRepository friendshipRepository)
+        IFriendshipRepository friendshipRepository,
+        IParticipationRepository participationRepository)
     {
         _activityRepository = activityRepository;
         _locationRepository = locationRepository;
         _friendshipRepository = friendshipRepository;
+        _participationRepository = participationRepository;
     }
 
     public async Task<PagedResult<ActivityDto>> GetAllAsync(ActivityFilterDto filter, int currentUserId, PaginationQuery pagination)
     {
         var activities = await _activityRepository.GetAllAsync(filter);
-        var followeeIds = await _friendshipRepository.GetFolloweeIdsAsync(currentUserId);
+        // Private activities are visible only to the organizer and to *mutual*
+        // friends (both users follow each other), not to one-way followers.
+        var mutualFriendIds = (await _friendshipRepository.GetMutualFriendIdsAsync(currentUserId))
+            .ToHashSet();
         var filtered = activities
             .Where(a => a.Type == ActivityType.Public
                      || a.OrganizerId == currentUserId
-                     || followeeIds.Contains(a.OrganizerId))
+                     || mutualFriendIds.Contains(a.OrganizerId))
             .ToList();
 
         return new PagedResult<ActivityDto>
@@ -52,8 +58,9 @@ public class ActivityService : IActivityService
 
         if (activity.Type == ActivityType.Private && activity.OrganizerId != currentUserId)
         {
-            if (!await _friendshipRepository.ExistsAsync(currentUserId, activity.OrganizerId))
-                throw new UnauthorizedException("This activity is private.");
+            // Mutual friendship required for private activities.
+            if (!await _friendshipRepository.AreMutualAsync(currentUserId, activity.OrganizerId))
+                throw new ForbiddenException("This activity is private. You need to be a mutual friend of the organizer to view it.");
         }
 
         return MapToDto(activity);
@@ -96,6 +103,15 @@ public class ActivityService : IActivityService
         };
 
         var created = await _activityRepository.AddAsync(activity);
+
+        await _participationRepository.AddAsync(new Participation
+        {
+            UserId = organizerId,
+            ActivityId = created.Id,
+            JoinedAt = DateTime.UtcNow,
+            Status = ParticipationStatus.Active
+        });
+
         return MapToDto((await _activityRepository.GetByIdWithDetailsAsync(created.Id))!);
     }
 
@@ -180,6 +196,7 @@ public class ActivityService : IActivityService
             Sports = a.Location.Sports,
             Surface = a.Location.Surface,
             HasLights = a.Location.HasLights,
+            MainPhotoUrl = a.Location.MainPhotoUrl,
             Status = a.Location.Status.ToString(),
             ProposedByUserId = a.Location.ProposedByUserId,
             CreatedAt = a.Location.CreatedAt

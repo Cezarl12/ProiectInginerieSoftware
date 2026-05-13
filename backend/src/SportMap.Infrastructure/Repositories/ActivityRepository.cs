@@ -24,6 +24,10 @@ public class ActivityRepository : IActivityRepository
             .Include(a => a.Participations)
             .AsQueryable();
 
+        // Only show upcoming activities in the discovery list.
+        // Past activities are preserved in the DB for user history.
+        query = query.Where(a => a.DateTime >= DateTime.UtcNow);
+
         if (!string.IsNullOrWhiteSpace(filter.Sport))
             query = query.Where(a => a.Sport.ToLower().Contains(filter.Sport.ToLower()));
 
@@ -39,7 +43,7 @@ public class ActivityRepository : IActivityRepository
         if (filter.LocationId.HasValue)
             query = query.Where(a => a.LocationId == filter.LocationId.Value);
 
-        return await query.OrderByDescending(a => a.DateTime).ToListAsync();
+        return await query.OrderBy(a => a.DateTime).ToListAsync();
     }
 
     public async Task<Activity?> GetByIdAsync(int id) =>

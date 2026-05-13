@@ -10,9 +10,8 @@ public class UpdateUserDto
     [StringLength(100, MinimumLength = 3)]
     public string? Username { get; set; }
 
-    /// <summary>URL-ul noii poze de profil. Null = fără modificare.</summary>
-    /// <example>https://example.com/avatar.jpg</example>
-    [Url]
+    /// <summary>URL-ul noii poze de profil (absolut sau relativ). Null = fără modificare.</summary>
+    /// <example>/uploads/avatars/1_abcd.png</example>
     [StringLength(255)]
     public string? ProfilePhotoUrl { get; set; }
 

@@ -410,18 +410,26 @@ export class RegisterComponent {
             'Account created!',
           );
           this.loading.set(false);
-          setTimeout(() => this.router.navigate(['/login']), 2500);
+          setTimeout(
+            () => this.router.navigate(['/login'], { replaceUrl: true }),
+            2500,
+          );
         },
         error: (err) => {
-          const msg: string = err?.error?.message ?? '';
+          const msg: string = (err?.error?.message ?? err?.error?.error ?? '').toString();
+          const lower = msg.toLowerCase();
           if (err?.status === 409) {
-            if (msg.toLowerCase().includes('email')) {
+            if (lower.includes('email')) {
               this.toast.error('An account with this email already exists.', 'Email taken');
-            } else if (msg.toLowerCase().includes('username')) {
+            } else if (lower.includes('username')) {
               this.toast.error('This username is already taken. Try another.', 'Username taken');
             } else {
               this.toast.error('An account with these details already exists.', 'Registration failed');
             }
+          } else if (err?.status === 400) {
+            this.toast.error(msg || 'Please double-check the form fields.', 'Invalid data');
+          } else if (err?.status === 0) {
+            this.toast.error('Cannot reach the server. Is the API running?', 'Network error');
           } else {
             this.toast.error('Registration failed. Please try again.', 'Something went wrong');
           }

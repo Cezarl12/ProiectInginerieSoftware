@@ -76,6 +76,21 @@ public class FriendshipService : IFriendshipService
         };
     }
 
+    public async Task<PagedResult<UserDto>> GetUserFolloweesAsync(int userId, PaginationQuery pagination)
+    {
+        var (followees, total) = await _friendshipRepository.GetFolloweesAsync(userId, pagination.Page, pagination.PageSize);
+        return new PagedResult<UserDto>
+        {
+            Items = followees.Select(MapToUserDto),
+            Page = pagination.Page,
+            PageSize = pagination.PageSize,
+            TotalCount = total
+        };
+    }
+
+    public async Task<bool> IsFollowingAsync(int currentUserId, int targetUserId)
+        => await _friendshipRepository.ExistsAsync(currentUserId, targetUserId);
+
     public async Task<IEnumerable<ActivityDto>> GetUserActivitiesAsync(int currentUserId, int targetUserId)
     {
         var activities = await _activityService.GetOrganizedByUserAsync(targetUserId);

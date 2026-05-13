@@ -22,6 +22,30 @@ public class FriendshipRepository : IFriendshipRepository
         await _context.Friendships
             .AnyAsync(f => f.FollowerId == followerId && f.FolloweeId == followeeId);
 
+    public async Task<bool> AreMutualAsync(int userA, int userB)
+    {
+        if (userA == userB) return false;
+        var aFollowsB = await _context.Friendships
+            .AnyAsync(f => f.FollowerId == userA && f.FolloweeId == userB);
+        if (!aFollowsB) return false;
+        return await _context.Friendships
+            .AnyAsync(f => f.FollowerId == userB && f.FolloweeId == userA);
+    }
+
+    public async Task<IEnumerable<int>> GetMutualFriendIdsAsync(int userId)
+    {
+        // People I follow ∩ people who follow me.
+        var iFollow = _context.Friendships
+            .AsNoTracking()
+            .Where(f => f.FollowerId == userId)
+            .Select(f => f.FolloweeId);
+        var followMe = _context.Friendships
+            .AsNoTracking()
+            .Where(f => f.FolloweeId == userId)
+            .Select(f => f.FollowerId);
+        return await iFollow.Intersect(followMe).ToListAsync();
+    }
+
     public async Task<(IEnumerable<User> Items, int TotalCount)> GetFolloweesAsync(int followerId, int page, int pageSize)
     {
         var query = _context.Friendships

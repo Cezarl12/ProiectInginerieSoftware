@@ -2,6 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
 import type { Activity, CreateActivityDto, UpdateActivityDto, ActivityFilter } from '../models/activity.model';
+import type { User } from '../models/user.model';
 import type { PagedResult } from '../models/location.model';
 
 @Injectable({ providedIn: 'root' })
@@ -19,6 +20,10 @@ export class ActivitiesService {
     return this.http.get<PagedResult<Activity>>(this.base, { params });
   }
 
+  getJoined() {
+    return this.http.get<Activity[]>(`${this.base}/me/joined`);
+  }
+
   getById(id: number) {
     return this.http.get<Activity>(`${this.base}/${id}`);
   }
@@ -33,5 +38,10 @@ export class ActivitiesService {
 
   delete(id: number) {
     return this.http.delete<void>(`${this.base}/${id}`);
+  }
+
+  getParticipants(activityId: number, page = 1, pageSize = 100) {
+    const params = new HttpParams().set('page', page).set('pageSize', pageSize);
+    return this.http.get<PagedResult<User>>(`${this.base}/${activityId}/participants`, { params });
   }
 }

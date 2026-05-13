@@ -25,6 +25,11 @@ Log.Logger = new LoggerConfiguration()
     .WriteTo.File("Logs/sportmap-.log", rollingInterval: RollingInterval.Day)
     .CreateLogger();
 
+// Don't rename JWT claims (sub, jti, etc.) on inbound validation.
+// Keeps `sub` as `sub` instead of mapping to ClaimTypes.NameIdentifier,
+// which makes our `NameClaimType = sub` setting work correctly.
+JwtSecurityTokenHandler.DefaultMapInboundClaims = false;
+
 var builder = WebApplication.CreateBuilder(args);
 builder.Host.UseSerilog();
 
@@ -54,6 +59,9 @@ builder.Services
     .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
+        // Don't strip claim mappings on this handler instance either.
+        options.MapInboundClaims = false;
+
         options.TokenValidationParameters = new TokenValidationParameters
         {
             ValidateIssuer = true,
@@ -64,8 +72,21 @@ builder.Services
             ValidAudience = jwtSettings.Audience,
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings.Secret)),
             ClockSkew = TimeSpan.FromMinutes(1),
+            // With MapInboundClaims = false the `sub` claim stays as `sub`.
             NameClaimType = JwtRegisteredClaimNames.Sub,
             RoleClaimType = ClaimTypes.Role
+        };
+
+        // Surface the underlying token error in WWW-Authenticate so the client
+        // (and devs) can tell *why* a 401 happened (expired vs invalid signature).
+        options.Events = new JwtBearerEvents
+        {
+            OnAuthenticationFailed = ctx =>
+            {
+                if (ctx.Exception is SecurityTokenExpiredException)
+                    ctx.Response.Headers.Append("Token-Expired", "true");
+                return Task.CompletedTask;
+            }
         };
     });
 
@@ -156,7 +177,13 @@ using (var scope = app.Services.CreateScope())
     await DbSeeder.SeedAdminAsync(context, hasher);
     await DbSeeder.SeedLocationsAsync(context);
     await DbSeeder.SeedOradeaLocationsAsync(context);
+    await DbSeeder.PatchLocationPhotosAsync(context); // replace picsum → real sport photos
 }
+
+// ---------- Ensure upload folders exist ----------
+var avatarsDir = Path.Combine(app.Environment.WebRootPath ?? Path.Combine(app.Environment.ContentRootPath, "wwwroot"),
+                              "uploads", "avatars");
+Directory.CreateDirectory(avatarsDir);
 
 // ---------- Pipeline ----------
 if (app.Environment.IsDevelopment())
@@ -175,7 +202,17 @@ if (app.Environment.IsDevelopment())
 
 app.UseMiddleware<ExceptionHandlingMiddleware>();
 
-app.UseHttpsRedirection();
+app.UseStaticFiles();
+
+// Only force HTTPS outside of local development. In dev the Angular proxy
+// targets http://localhost:5000 directly and a 307 redirect to an HTTPS
+// port that may not be configured breaks every authenticated API call,
+// which presents itself as "after login I'm immediately bounced back".
+if (!app.Environment.IsDevelopment())
+{
+    app.UseHttpsRedirection();
+}
+
 app.UseCors("AngularClient");
 app.UseAuthentication();
 app.UseAuthorization();

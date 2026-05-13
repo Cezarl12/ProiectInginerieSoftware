@@ -132,23 +132,45 @@ function markerHtml(color: string, icon: string, name: string): string {
             }
           </div>
 
-          <!-- Sport filter chips -->
-          <div class="flex gap-2 overflow-x-auto" style="scrollbar-width:none;-webkit-overflow-scrolling:touch;">
-            @for (chip of FILTER_CHIPS; track chip) {
-              <button
-                (click)="setFilter(chip)"
-                class="flex-shrink-0 flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-bold transition-all active:scale-95"
-                [class]="activeFilter() === chip
-                  ? 'bg-primary text-on-primary shadow-md'
-                  : 'bg-white/90 backdrop-blur-md text-on-surface shadow-sm border border-outline-variant/10'"
-              >
-                @if (chip !== 'All') {
-                  <span class="w-2 h-2 rounded-full shrink-0"
-                    [style.background-color]="activeFilter() === chip ? 'rgba(255,255,255,0.6)' : sportColor(chip)">
-                  </span>
+          <!-- Sport filter: mobile dropdown -->
+          <div class="relative">
+            <button (click)="mobileDropdownOpen.update(v => !v)"
+                    class="w-full flex items-center justify-between gap-2 px-4 py-2.5 rounded-2xl bg-white/95 backdrop-blur-md shadow-sm border border-outline-variant/10 active:scale-[0.99] transition-all">
+              <span class="flex items-center gap-2 min-w-0">
+                @if (activeFilter() !== 'All') {
+                  <span class="w-2.5 h-2.5 rounded-full shrink-0" [style.background-color]="sportColor(activeFilter())"></span>
+                } @else {
+                  <span class="material-symbols-outlined text-[18px] text-primary shrink-0">tune</span>
                 }
-                {{ chip }}
-              </button>
+                <span class="text-sm font-bold text-on-surface truncate">{{ activeFilter() }}</span>
+                <span class="text-xs text-outline">· Filter sport</span>
+              </span>
+              <span class="material-symbols-outlined text-[18px] text-on-surface-variant transition-transform"
+                    [class.rotate-180]="mobileDropdownOpen()">expand_more</span>
+            </button>
+            @if (mobileDropdownOpen()) {
+              <div class="absolute top-full left-0 right-0 bg-white/95 backdrop-blur-xl rounded-2xl shadow-xl mt-2 z-30 border border-outline-variant/10 max-h-[55vh] overflow-y-auto">
+                @for (chip of FILTER_CHIPS; track chip) {
+                  <button
+                    (click)="setFilter(chip)"
+                    class="w-full flex items-center justify-between gap-2 px-4 py-2.5 text-left hover:bg-surface-container-low active:bg-surface-container transition-colors first:rounded-t-2xl last:rounded-b-2xl border-b border-outline-variant/5 last:border-0">
+                    <span class="flex items-center gap-2 min-w-0">
+                      @if (chip !== 'All') {
+                        <span class="w-2.5 h-2.5 rounded-full shrink-0" [style.background-color]="sportColor(chip)"></span>
+                      } @else {
+                        <span class="material-symbols-outlined text-[16px] text-primary shrink-0">apps</span>
+                      }
+                      <span class="text-sm font-semibold"
+                            [class]="activeFilter() === chip ? 'text-primary' : 'text-on-surface'">
+                        {{ chip }}
+                      </span>
+                    </span>
+                    @if (activeFilter() === chip) {
+                      <span class="material-symbols-outlined text-[18px] text-primary">check</span>
+                    }
+                  </button>
+                }
+              </div>
             }
           </div>
         </div>
@@ -401,10 +423,11 @@ export class HomeComponent implements OnInit, OnDestroy {
   private destroyRef = inject(DestroyRef);
 
   protected FILTER_CHIPS = FILTER_CHIPS;
-  searchQuery  = signal('');
-  activeFilter = signal('All');
-  activities   = signal<Activity[]>([]);
-  locations    = signal<Location[]>([]);
+  searchQuery        = signal('');
+  activeFilter       = signal('All');
+  mobileDropdownOpen = signal(false);
+  activities         = signal<Activity[]>([]);
+  locations          = signal<Location[]>([]);
 
   private map: L.Map | null = null;
   private markers: L.Marker[] = [];
@@ -538,6 +561,7 @@ export class HomeComponent implements OnInit, OnDestroy {
 
   setFilter(chip: string): void {
     this.activeFilter.set(chip);
+    this.mobileDropdownOpen.set(false);
   }
 
   centerOnUser(): void {

@@ -159,23 +159,34 @@ export class LoginComponent {
   showPassword = signal(false);
 
   submit(): void {
-    if (this.form.invalid) return;
+    if (this.form.invalid) {
+      this.form.markAllAsTouched();
+      return;
+    }
     this.loading.set(true);
     const { email, password } = this.form.getRawValue();
     this.auth.login({ email: email!, password: password! }).subscribe({
       next: () => {
-        const returnUrl = this.route.snapshot.queryParams['returnUrl'] ?? '/home';
-        this.router.navigateByUrl(returnUrl);
+        const requested = this.route.snapshot.queryParams['returnUrl'] as string | undefined;
+        // Never honour a returnUrl that points back at an auth screen.
+        const target = requested && !/^\/(login|register)(\/|$|\?)/.test(requested)
+          ? requested
+          : '/home';
+        // replaceUrl so the browser back button doesn't return the user to /login.
+        this.router.navigateByUrl(target, { replaceUrl: true });
       },
       error: (err) => {
-        const msg: string = err?.error?.message ?? '';
-        if (msg.toLowerCase().includes('not confirmed') || msg.toLowerCase().includes('not verified')) {
+        const msg: string = (err?.error?.message ?? err?.error?.error ?? '').toString();
+        const lower = msg.toLowerCase();
+        if (lower.includes('not confirmed') || lower.includes('not verified')) {
           this.toast.warning(
             'Check your inbox and click the confirmation link before logging in.',
             'Email not verified',
           );
         } else if (err?.status === 401) {
           this.toast.error('Incorrect email or password.', 'Login failed');
+        } else if (err?.status === 0) {
+          this.toast.error('Cannot reach the server. Is the API running?', 'Network error');
         } else {
           this.toast.error('Something went wrong. Please try again later.', 'Error');
         }
