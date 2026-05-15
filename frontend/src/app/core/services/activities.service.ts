@@ -17,6 +17,7 @@ export class ActivitiesService {
     if (filter?.fromDate) params = params.set('fromDate', filter.fromDate);
     if (filter?.toDate) params = params.set('toDate', filter.toDate);
     if (filter?.locationId) params = params.set('locationId', filter.locationId);
+    if (filter?.search) params = params.set('search', filter.search);
     return this.http.get<PagedResult<Activity>>(this.base, { params });
   }
 

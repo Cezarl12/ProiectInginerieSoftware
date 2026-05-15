@@ -26,6 +26,16 @@ export const routes: Routes = [
     canActivate: [authGuard],
   },
   {
+    path: 'locations/propose',
+    loadComponent: () =>
+      import('./features/locations/propose-location/propose-location.component').then(
+        m => m.ProposeLocationComponent,
+      ),
+    canActivate: [authGuard],
+  },
+  // Defensive alias: any stray link to /propose redirects to the canonical route
+  { path: 'propose', redirectTo: 'locations/propose', pathMatch: 'full' },
+  {
     path: 'locations/:id',
     loadComponent: () =>
       import('./features/locations/location-detail/location-detail.component').then(

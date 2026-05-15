@@ -13,6 +13,7 @@ import { DesktopHeaderComponent } from '../../shared/components/desktop-header/d
 import { LocationsService } from '../../core/services/locations.service';
 import { ActivitiesService } from '../../core/services/activities.service';
 import { ToastService } from '../../core/services/toast.service';
+import { SearchService } from '../../core/services/search.service';
 import type { Location } from '../../core/models/location.model';
 import type { Activity } from '../../core/models/activity.model';
 
@@ -206,14 +207,21 @@ function markerHtml(color: string, icon: string, name: string): string {
                   <h2 class="text-xl font-black tracking-tight text-on-surface">Activities</h2>
                   <p class="text-xs text-outline font-medium mt-0.5">
                     {{ filteredActivities().length }}
-                    {{ searchQuery() || activeFilter() !== 'All' ? 'matching' : 'nearby' }}
+                    {{ activeFilter() !== 'All' ? 'matching' : 'nearby' }}
                   </p>
                 </div>
-                <a routerLink="/activities/create"
-                  class="flex items-center gap-1 bg-primary text-on-primary text-xs font-bold px-4 py-2 rounded-full hover:bg-primary-dim active:scale-95 transition-all">
-                  <span class="material-symbols-outlined text-[16px]">add</span>
-                  Create
-                </a>
+                <div class="flex items-center gap-2">
+                  <a routerLink="/activities/create"
+                    class="flex items-center gap-1 bg-primary text-on-primary text-xs font-bold px-4 py-2 rounded-full hover:bg-primary-dim active:scale-95 transition-all">
+                    <span class="material-symbols-outlined text-[16px]">add</span>
+                    Create
+                  </a>
+                  <a routerLink="/locations/propose"
+                    class="flex items-center gap-1 bg-surface-container text-on-surface text-xs font-bold px-3 py-2 rounded-full hover:bg-surface-container-high active:scale-95 transition-all border border-outline-variant/20"
+                    title="Propose a new venue">
+                    <span class="material-symbols-outlined text-[16px] text-primary">add_location</span>
+                  </a>
+                </div>
               </div>
 
               <!-- Desktop search -->
@@ -237,6 +245,7 @@ function markerHtml(color: string, icon: string, name: string): string {
 
             <!-- Activity list -->
             <div class="flex-1 overflow-y-auto px-4 py-3 space-y-2" style="scrollbar-width:thin;scrollbar-color:#d0deff transparent;">
+
               @for (activity of filteredActivities(); track activity.id) {
                 <div
                   class="group flex gap-3 p-3 rounded-xl cursor-pointer hover:bg-surface-container-low active:scale-[0.98] transition-all"
@@ -287,9 +296,9 @@ function markerHtml(color: string, icon: string, name: string): string {
                     <span class="material-symbols-outlined text-3xl text-outline">sports</span>
                   </div>
                   <p class="text-sm font-medium text-center">
-                    {{ searchQuery() || activeFilter() !== 'All' ? 'No results found' : 'No activities yet' }}
+                    {{ activeFilter() !== 'All' ? 'No results found' : 'No activities yet' }}
                   </p>
-                  @if (!searchQuery() && activeFilter() === 'All') {
+                  @if (activeFilter() === 'All') {
                     <a routerLink="/activities/create"
                       class="text-xs font-bold text-primary hover:underline">
                       Be the first to create one →
@@ -320,11 +329,18 @@ function markerHtml(color: string, icon: string, name: string): string {
                     {{ filteredActivities().length }} activities
                   </p>
                 </div>
-                <a routerLink="/activities/create"
-                  class="flex items-center gap-1 bg-primary text-on-primary text-[10px] font-bold px-3 py-1.5 rounded-full">
-                  <span class="material-symbols-outlined text-[14px]">add</span>
-                  Create
-                </a>
+                <div class="flex items-center gap-2">
+                  <a routerLink="/activities/create"
+                    class="flex items-center gap-1 bg-primary text-on-primary text-[10px] font-bold px-3 py-1.5 rounded-full">
+                    <span class="material-symbols-outlined text-[14px]">add</span>
+                    Create
+                  </a>
+                  <a routerLink="/locations/propose"
+                    class="flex items-center justify-center w-7 h-7 bg-surface-container rounded-full border border-outline-variant/20"
+                    title="Propose venue">
+                    <span class="material-symbols-outlined text-[14px] text-primary">add_location</span>
+                  </a>
+                </div>
               </div>
 
               <!-- Horizontal scroll cards -->
@@ -421,9 +437,11 @@ export class HomeComponent implements OnInit, OnDestroy {
   private toast = inject(ToastService);
   private router = inject(Router);
   private destroyRef = inject(DestroyRef);
+  private searchService = inject(SearchService);
 
   protected FILTER_CHIPS = FILTER_CHIPS;
-  searchQuery        = signal('');
+  // Bound to the global SearchService so the desktop-header search drives this too
+  readonly searchQuery   = this.searchService.query;
   activeFilter       = signal('All');
   mobileDropdownOpen = signal(false);
   activities         = signal<Activity[]>([]);
@@ -452,21 +470,14 @@ export class HomeComponent implements OnInit, OnDestroy {
     return locs;
   });
 
+  // Activities are intentionally NOT filtered by searchQuery — the search bar
+  // only narrows venues. The activities list on the right stays put when typing.
   filteredActivities = computed(() => {
     const f = this.activeFilter();
-    const q = this.searchQuery().toLowerCase().trim();
     let all = this.activities();
 
     if (f !== 'All') {
       all = all.filter(a => a.sport.toLowerCase() === f.toLowerCase());
-    }
-    if (q) {
-      all = all.filter(a =>
-        a.title.toLowerCase().includes(q) ||
-        a.sport.toLowerCase().includes(q) ||
-        (a.location?.name?.toLowerCase().includes(q) ?? false) ||
-        (a.location?.address?.toLowerCase().includes(q) ?? false)
-      );
     }
     return all;
   });
@@ -579,6 +590,15 @@ export class HomeComponent implements OnInit, OnDestroy {
 
   goToActivity(id: number): void {
     this.router.navigate(['/activities', id]);
+  }
+
+  goToLocation(id: number): void {
+    this.router.navigate(['/locations', id]);
+  }
+
+  /** Extracts the first sport from a CSV-style sports field. */
+  firstSport(sports: string | null | undefined): string {
+    return (sports ?? '').split(',')[0]?.trim() || 'default';
   }
 
   sportColor(sport: string): string {

@@ -2,7 +2,8 @@ import {
   Component, inject, signal, computed, ChangeDetectionStrategy, DestroyRef,
 } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
+import { Location as NgLocation } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { catchError, EMPTY } from 'rxjs';
@@ -19,7 +20,7 @@ import type { Location } from '../../../core/models/location.model';
   selector: 'app-create-activity',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ReactiveFormsModule, BottomNavComponent, DesktopHeaderComponent],
+  imports: [ReactiveFormsModule, BottomNavComponent, DesktopHeaderComponent, RouterLink],
   template: `
     <div class="min-h-screen bg-background pb-32">
       <app-desktop-header />
@@ -44,6 +45,20 @@ import type { Location } from '../../../core/models/location.model';
         <!-- ═══════════════ MOBILE LAYOUT ═══════════════ -->
         <div class="md:hidden px-5 py-6 max-w-2xl mx-auto space-y-8">
 
+          <!-- Hero banner -->
+          <div class="relative h-28 rounded-2xl overflow-hidden shadow-lg -rotate-1">
+            <img src="https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=800&h=300&fit=crop&q=80"
+                 alt="Sport" class="w-full h-full object-cover" />
+            <div class="absolute inset-0 bg-gradient-to-r from-primary/80 to-tertiary/60 flex items-center px-6 gap-4">
+              <span class="material-symbols-outlined text-white text-4xl"
+                    style="font-variation-settings:'FILL' 1,'wght' 600,'GRAD' 0,'opsz' 48;">add_circle</span>
+              <div>
+                <p class="text-white font-black text-lg leading-tight tracking-tight">New Event</p>
+                <p class="text-white/80 text-xs font-medium">Set the stage. Invite the community.</p>
+              </div>
+            </div>
+          </div>
+
           <!-- Title -->
           <section class="space-y-2">
             <label class="text-xs font-bold tracking-widest text-on-surface-variant uppercase">Activity Title</label>
@@ -67,7 +82,7 @@ import type { Location } from '../../../core/models/location.model';
               @for (sport of ALL_SPORTS; track sport.label) {
                 <button type="button" (click)="selectSport(sport.label)"
                         class="flex-shrink-0 flex items-center gap-2 px-5 py-3 rounded-full transition-all active:scale-95"
-                        [class]="selectedSport() === sport.label
+                        [class]="selectedSport() === sport.label && !showOtherInput()
                           ? 'bg-primary text-on-primary shadow-lg scale-105'
                           : 'bg-surface-container-lowest border border-outline-variant/10 shadow-sm text-on-surface'">
                   <span class="w-2 h-2 rounded-full flex-shrink-0"
@@ -75,7 +90,25 @@ import type { Location } from '../../../core/models/location.model';
                   <span class="text-sm font-medium whitespace-nowrap">{{ sport.label }}</span>
                 </button>
               }
+              <!-- "Other…" chip -->
+              <button type="button" (click)="enableOther()"
+                      class="flex-shrink-0 flex items-center gap-2 px-5 py-3 rounded-full transition-all active:scale-95"
+                      [class]="showOtherInput()
+                        ? 'bg-primary text-on-primary shadow-lg scale-105'
+                        : 'bg-surface-container-lowest border border-dashed border-outline-variant/40 shadow-sm text-on-surface-variant'">
+                <span class="material-symbols-outlined text-[16px]">add</span>
+                <span class="text-sm font-medium whitespace-nowrap">Other…</span>
+              </button>
             </div>
+            @if (showOtherInput()) {
+              <input type="text" [value]="customSport()"
+                     (input)="setCustomSport($any($event.target).value)"
+                     maxlength="40"
+                     placeholder="Type your sport (e.g. Pickleball)"
+                     class="w-full bg-surface-container-low border-none rounded-xl p-4 text-sm
+                            focus:bg-surface-container-lowest focus:outline-none focus:ring-0 transition-all
+                            placeholder:text-outline-variant shadow-inner" />
+            }
             @if (submitted() && !selectedSport()) {
               <p class="text-xs text-error flex items-center gap-1">
                 <span class="material-symbols-outlined text-[14px]">error</span>
@@ -160,6 +193,11 @@ import type { Location } from '../../../core/models/location.model';
                 Please select a location.
               </p>
             }
+            <a routerLink="/locations/propose"
+               class="flex items-center gap-2 text-xs text-primary font-semibold mt-1 w-fit hover:underline">
+              <span class="material-symbols-outlined text-[15px]">add_location</span>
+              Venue not listed? Propose a new one
+            </a>
           </section>
 
           <!-- Description -->
@@ -255,16 +293,34 @@ import type { Location } from '../../../core/models/location.model';
                   @for (sport of ALL_SPORTS; track sport.label) {
                     <button type="button" (click)="selectSport(sport.label)"
                             class="flex items-center gap-2 px-6 py-3 rounded-full transition-all active:scale-95"
-                            [class]="selectedSport() === sport.label
+                            [class]="selectedSport() === sport.label && !showOtherInput()
                               ? 'bg-tertiary text-white shadow-lg'
                               : 'bg-surface-container-low text-on-surface-variant hover:bg-surface-container-high'">
                       <span class="w-2 h-2 rounded-full flex-shrink-0"
-                            [class]="selectedSport() === sport.label ? 'bg-white animate-pulse' : ''"
-                            [style.background-color]="selectedSport() !== sport.label ? sport.color : undefined"></span>
+                            [class]="selectedSport() === sport.label && !showOtherInput() ? 'bg-white animate-pulse' : ''"
+                            [style.background-color]="(selectedSport() !== sport.label || showOtherInput()) ? sport.color : undefined"></span>
                       <span class="font-bold text-sm">{{ sport.label }}</span>
                     </button>
                   }
+                  <!-- "Other…" chip -->
+                  <button type="button" (click)="enableOther()"
+                          class="flex items-center gap-2 px-6 py-3 rounded-full transition-all active:scale-95"
+                          [class]="showOtherInput()
+                            ? 'bg-tertiary text-white shadow-lg'
+                            : 'bg-surface-container-low text-on-surface-variant hover:bg-surface-container-high border border-dashed border-outline-variant/40'">
+                    <span class="material-symbols-outlined text-[16px]">add</span>
+                    <span class="font-bold text-sm">Other…</span>
+                  </button>
                 </div>
+                @if (showOtherInput()) {
+                  <input type="text" [value]="customSport()"
+                         (input)="setCustomSport($any($event.target).value)"
+                         maxlength="40"
+                         placeholder="Type your sport (e.g. Pickleball)"
+                         class="w-full bg-surface-container-low border-none rounded-xl py-4 px-6 text-sm
+                                focus:ring-2 focus:ring-primary/30 focus:outline-none transition-all
+                                placeholder:text-outline-variant" />
+                }
                 @if (submitted() && !selectedSport()) {
                   <p class="text-xs text-error flex items-center gap-1">
                     <span class="material-symbols-outlined text-[14px]">error</span>
@@ -364,6 +420,11 @@ import type { Location } from '../../../core/models/location.model';
                     Please select a location.
                   </p>
                 }
+                <a routerLink="/locations/propose"
+                   class="flex items-center gap-1.5 text-xs text-primary font-semibold mt-1 w-fit hover:underline">
+                  <span class="material-symbols-outlined text-[15px]">add_location</span>
+                  Venue not listed? Propose a new one
+                </a>
               </div>
 
               <!-- Description -->
@@ -417,15 +478,20 @@ export class CreateActivityComponent {
   private activitiesService = inject(ActivitiesService);
   private locationsService  = inject(LocationsService);
   private router = inject(Router);
+  private ngLocation = inject(NgLocation);
   private toast  = inject(ToastService);
   private destroyRef = inject(DestroyRef);
 
-  selectedSport = signal('');
-  isPublic      = signal(true);
-  loading       = signal(false);
-  submitError   = signal('');
-  submitted     = signal(false);
-  allLocations  = signal<Location[]>([]);
+  selectedSport   = signal('');
+  /** True when the user picked the "Other…" chip and is entering a custom sport. */
+  showOtherInput  = signal(false);
+  /** Free-text sport name when "Other…" is active. */
+  customSport     = signal('');
+  isPublic        = signal(true);
+  loading         = signal(false);
+  submitError     = signal('');
+  submitted       = signal(false);
+  allLocations    = signal<Location[]>([]);
 
   readonly today = new Date().toISOString().split('T')[0];
 
@@ -453,6 +519,9 @@ export class CreateActivityComponent {
   }
 
   selectSport(sport: string): void {
+    // Picking a built-in sport leaves "Other…" mode and clears any custom value.
+    this.showOtherInput.set(false);
+    this.customSport.set('');
     this.selectedSport.set(sport);
     const currentId = this.form.get('locationId')?.value;
     if (currentId) {
@@ -461,6 +530,17 @@ export class CreateActivityComponent {
         this.form.get('locationId')?.setValue('');
       }
     }
+  }
+
+  enableOther(): void {
+    this.showOtherInput.set(true);
+    // selectedSport stays whatever the user typed (may be empty until they type).
+    this.selectedSport.set(this.customSport().trim());
+  }
+
+  setCustomSport(value: string): void {
+    this.customSport.set(value);
+    this.selectedSport.set(value.trim());
   }
 
   increment(): void {
@@ -478,8 +558,12 @@ export class CreateActivityComponent {
   togglePrivacy(): void { this.isPublic.update(v => !v); }
 
   goBack(): void {
-    if (window.history.length > 1) window.history.back();
-    else this.router.navigate(['/activities']);
+    // Prefer real history-back so the user returns where they actually came from.
+    if (typeof history !== 'undefined' && history.length > 1) {
+      this.ngLocation.back();
+    } else {
+      this.router.navigate(['/activities']);
+    }
   }
 
   submit(): void {

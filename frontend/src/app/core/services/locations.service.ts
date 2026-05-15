@@ -9,7 +9,8 @@ export class LocationsService {
   private base = `${environment.apiUrl}/locations`;
 
   getAll(page = 1, pageSize = 20) {
-    const params = new HttpParams().set('page', page).set('pageSize', pageSize);
+    // status=1 → Approved only (Pending/Rejected are never shown publicly)
+    const params = new HttpParams().set('page', page).set('pageSize', pageSize).set('status', 1);
     return this.http.get<PagedResult<Location>>(this.base, { params });
   }
 
@@ -35,5 +36,18 @@ export class LocationsService {
 
   delete(id: number) {
     return this.http.delete<void>(`${this.base}/${id}`);
+  }
+
+  getPending(page = 1, pageSize = 20) {
+    const params = new HttpParams().set('status', 0).set('page', page).set('pageSize', pageSize);
+    return this.http.get<PagedResult<Location>>(this.base, { params });
+  }
+
+  approve(id: number) {
+    return this.http.post<Location>(`${this.base}/${id}/approve`, {});
+  }
+
+  reject(id: number) {
+    return this.http.post<Location>(`${this.base}/${id}/reject`, {});
   }
 }

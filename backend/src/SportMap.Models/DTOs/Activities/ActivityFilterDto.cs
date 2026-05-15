@@ -20,4 +20,8 @@ public class ActivityFilterDto
 
     /// <summary>Filtrează după ID-ul locației.</summary>
     public int? LocationId { get; set; }
+
+    /// <summary>Caută după titlu sau numele locației (case-insensitive, parțial).</summary>
+    /// <example>fotbal parc</example>
+    public string? Search { get; set; }
 }

@@ -43,6 +43,14 @@ public class ActivityRepository : IActivityRepository
         if (filter.LocationId.HasValue)
             query = query.Where(a => a.LocationId == filter.LocationId.Value);
 
+        if (!string.IsNullOrWhiteSpace(filter.Search))
+        {
+            var term = filter.Search.Trim().ToLower();
+            query = query.Where(a =>
+                a.Title.ToLower().Contains(term) ||
+                (a.Location != null && a.Location.Name.ToLower().Contains(term)));
+        }
+
         return await query.OrderBy(a => a.DateTime).ToListAsync();
     }
 

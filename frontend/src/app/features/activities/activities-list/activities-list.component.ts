@@ -4,8 +4,8 @@ import {
 } from '@angular/core';
 import { Router, RouterLink, ActivatedRoute } from '@angular/router';
 import { DatePipe } from '@angular/common';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { catchError, EMPTY } from 'rxjs';
+import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
+import { catchError, EMPTY, debounceTime, distinctUntilChanged, skip } from 'rxjs';
 import { ActivitiesService } from '../../../core/services/activities.service';
 import { ToastService } from '../../../core/services/toast.service';
 import { BottomNavComponent } from '../../../shared/components/bottom-nav/bottom-nav.component';
@@ -50,7 +50,7 @@ const FILTER_CHIPS = ['All', 'Football', 'Tennis', 'Basketball', 'Running', 'Swi
               class="bg-transparent border-none focus:ring-0 text-sm w-full placeholder:text-outline-variant outline-none text-on-surface"
             />
             @if (searchQuery()) {
-              <button (click)="searchQuery.set('')" class="text-outline">
+              <button (click)="clearSearch()" class="text-outline">
                 <span class="material-symbols-outlined text-[16px]">close</span>
               </button>
             }
@@ -64,7 +64,9 @@ const FILTER_CHIPS = ['All', 'Football', 'Tennis', 'Basketball', 'Running', 'Swi
           <span class="text-primary font-bold tracking-widest text-[10px] uppercase block mb-1">Discover</span>
           <h2 class="text-4xl font-black tracking-tighter text-on-surface leading-none">Activities</h2>
           <p class="text-sm text-on-surface-variant mt-2">
-            {{ totalCount() }} {{ activeFilter() !== 'All' ? activeFilter() : '' }} activities
+            {{ totalCount() }} {{ searchQuery() ? 'results' : 'activities' }}
+            @if (activeFilter() !== 'All') { <span class="text-primary font-semibold">· {{ activeFilter() }}</span> }
+            @if (loading()) { <span class="text-outline">…</span> }
           </p>
         </div>
         <div class="flex items-center gap-4">
@@ -79,7 +81,7 @@ const FILTER_CHIPS = ['All', 'Football', 'Tennis', 'Basketball', 'Running', 'Swi
               class="bg-transparent border-none focus:ring-0 text-sm w-full placeholder:text-outline-variant outline-none text-on-surface"
             />
             @if (searchQuery()) {
-              <button (click)="searchQuery.set('')" class="text-outline">
+              <button (click)="clearSearch()" class="text-outline">
                 <span class="material-symbols-outlined text-[16px]">close</span>
               </button>
             }
@@ -310,11 +312,15 @@ export class ActivitiesListComponent implements OnInit {
   private route = inject(ActivatedRoute);
   private activitiesService = inject(ActivitiesService);
   private toast = inject(ToastService);
-  private destroyRef = inject(DestroyRef);
+  private readonly destroyRef = inject(DestroyRef);
 
   private readonly PAGE_SIZE = 20;
 
+  /** Live value shown in both search inputs (updates on every keystroke). */
   searchQuery        = signal('');
+  /** Debounced value actually sent to the server. */
+  private appliedSearch = signal('');
+
   activeFilter       = signal('All');
   mobileDropdownOpen = signal(false);
   activities         = signal<Activity[]>([]);
@@ -327,18 +333,48 @@ export class ActivitiesListComponent implements OnInit {
   readonly sportColor = sportColor;
   readonly sportIcon = sportIcon;
 
-  filteredActivities = computed(() => {
+  /**
+   * Client-side filter gives instant visual feedback while the debounced
+   * API call is in-flight. Once the server responds with the real results,
+   * `activities` is replaced and this computed just passes them through.
+   */
+  readonly filteredActivities = computed(() => {
     const q = this.searchQuery().toLowerCase().trim();
-    if (!q) return this.activities();
-    return this.activities().filter(a =>
+    const items = this.activities();
+    if (!q) return items;
+    return items.filter(a =>
       a.title.toLowerCase().includes(q) ||
-      (a.location?.name?.toLowerCase().includes(q) ?? false)
+      (a.location?.name?.toLowerCase().includes(q) ?? false),
     );
   });
 
+  constructor() {
+    // toObservable runs inside the injection context (constructor) — safe for zoneless.
+    // skip(1) ignores the initial '' emission so we don't double-load on init.
+    toObservable(this.searchQuery).pipe(
+      skip(1),
+      debounceTime(400),
+      distinctUntilChanged(),
+      takeUntilDestroyed(),
+    ).subscribe(q => {
+      this.appliedSearch.set(q);
+      this.load(true);
+    });
+  }
+
   ngOnInit(): void {
     const q = this.route.snapshot.queryParamMap.get('q');
-    if (q) this.searchQuery.set(q);
+    if (q) {
+      this.searchQuery.set(q);
+      this.appliedSearch.set(q);
+    }
+    this.load(true);
+  }
+
+  /** Clear button resets both signals immediately. */
+  clearSearch(): void {
+    this.searchQuery.set('');
+    this.appliedSearch.set('');
     this.load(true);
   }
 
@@ -364,7 +400,8 @@ export class ActivitiesListComponent implements OnInit {
     }
 
     const sport = this.activeFilter() !== 'All' ? this.activeFilter() : undefined;
-    this.activitiesService.getAll({ sport }, this.currentPage, this.PAGE_SIZE).pipe(
+    const search = this.appliedSearch() || undefined;
+    this.activitiesService.getAll({ sport, search }, this.currentPage, this.PAGE_SIZE).pipe(
       takeUntilDestroyed(this.destroyRef),
       catchError(() => {
         this.toast.error('Could not load activities.', 'Error');

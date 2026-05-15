@@ -49,4 +49,5 @@ export interface ActivityFilter {
   fromDate?: string;
   toDate?: string;
   locationId?: number;
+  search?: string;
 }

@@ -102,6 +102,46 @@
     font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
   }
 
+  /* Override @tailwindcss/forms default borders — we style every input ourselves */
+  input, textarea, select {
+    border: none !important;
+    box-shadow: none !important;
+    outline: none;
+  }
+  input:focus, textarea:focus, select:focus {
+    outline: none !important;
+    box-shadow: none !important;
+    border: none !important;
+  }
+
+  /*
+   * Kill the @tailwindcss/forms default dropdown arrow on <select>.
+   * We render our own Material Symbols arrow next to every select, so the
+   * plugin's background-image arrow caused two arrows to show up.
+   */
+  select {
+    background-image: none !important;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    /* Leave room on the right for our custom <span class="expand_more"> icon */
+    padding-right: 2.5rem;
+  }
+
+  /* Hide browser-native date/time/number picker icons — we use Material Symbols instead */
+  input[type="date"]::-webkit-calendar-picker-indicator,
+  input[type="time"]::-webkit-calendar-picker-indicator,
+  input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+    display: none !important;
+    opacity: 0 !important;
+  }
+  input[type="number"]::-webkit-outer-spin-button,
+  input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+  input[type="number"] { -moz-appearance: textfield; }
+
   .text-display-lg {
     @apply text-6xl font-extrabold tracking-tight;
     letter-spacing: -0.02em;

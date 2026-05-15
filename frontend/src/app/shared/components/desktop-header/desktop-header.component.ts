@@ -2,6 +2,7 @@ import { Component, inject, signal, computed } from '@angular/core';
 import { RouterLink, RouterLinkActive, Router } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
 import { UsersService } from '../../../core/services/users.service';
+import { SearchService } from '../../../core/services/search.service';
 
 @Component({
   selector: 'app-desktop-header',
@@ -20,7 +21,7 @@ import { UsersService } from '../../../core/services/users.service';
           <input
             type="text"
             [value]="searchValue()"
-            (input)="searchValue.set($any($event.target).value)"
+            (input)="onSearchInput($any($event.target).value)"
             (keyup.enter)="onSearchSubmit()"
             placeholder="Search activities, venues, sports…"
             class="w-full pl-11 pr-4 py-3 bg-surface-container-low border-none rounded-full
@@ -84,8 +85,10 @@ import { UsersService } from '../../../core/services/users.service';
 export class DesktopHeaderComponent {
   private auth = inject(AuthService);
   private router = inject(Router);
+  private search = inject(SearchService);
 
-  searchValue = signal('');
+  // Read live from the shared service so other components stay in sync
+  readonly searchValue = this.search.query;
 
   isAdmin = () => this.auth.currentUser()?.role === 'Admin';
 
@@ -94,12 +97,23 @@ export class DesktopHeaderComponent {
     return name.slice(0, 2).toUpperCase() || 'SM';
   }
 
+  onSearchInput(value: string) {
+    this.search.set(value);
+    // If the user types from anywhere, jump to /home so they see the filtered results.
+    if (value && !this.router.url.startsWith('/home') && !this.router.url.startsWith('/activities')) {
+      this.router.navigate(['/home']);
+    }
+  }
+
   onSearchSubmit() {
-    this.searchValue.set('');
+    // Make sure we're on a page that actually consumes the query
+    if (!this.router.url.startsWith('/home') && !this.router.url.startsWith('/activities')) {
+      this.router.navigate(['/home']);
+    }
   }
 
   clearSearch() {
-    this.searchValue.set('');
+    this.search.clear();
   }
 
   logout() {
